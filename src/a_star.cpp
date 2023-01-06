@@ -18,7 +18,7 @@ int main (int argc, char **argv)
 	ros::NodeHandle nh; 
 
     // 发布消息 话题名字 队列大小
-	ros::Publisher pub = nh.advertise<std_msgs::Int8MultiArray> ("planning_info1", 100, ros::init_options::AnonymousName);
+	ros::Publisher pub = nh.advertise<std_msgs::Int8MultiArray> ("planning_info", 100, ros::init_options::AnonymousName);
     
     //geometry_msgs::Point start_goal;
     std_msgs::Int8MultiArray map;
@@ -98,10 +98,10 @@ int main (int argc, char **argv)
                     }
                     else if (i<18)
                     {
-                        cost = sqrt(2);
+                        cost = sqrt(2.0);
                     }
                     else {
-                        cost = sqrt(3);
+                        cost = sqrt(3.0);
                     }
                     
 
@@ -215,7 +215,6 @@ int main (int argc, char **argv)
         if (path_found){
             ros::Rate loop_rate(5);
             pub.publish(map);
-            ros::spinOnce(); 
             loop_rate.sleep(); 
 
         }

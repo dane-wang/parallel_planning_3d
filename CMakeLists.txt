@@ -139,6 +139,12 @@ add_executable(a_star_3d src/a_star.cpp)
 target_link_libraries(a_star_3d ${catkin_LIBRARIES}  planner)
 
 
+cuda_add_executable(a_star_3d_parallel  src/a_star_parallel.cu)
+target_link_libraries(a_star_3d_parallel ${catkin_LIBRARIES} ${CUDA_LIBRARIES} planner)
+
+
+
+
 
 catkin_install_python(PROGRAMS src/mappublish.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
