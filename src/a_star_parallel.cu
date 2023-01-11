@@ -190,7 +190,7 @@ int main(int argc, char** argv)
 
   // Initialize the obstacles list
   for(int i=0; i< xml_obstacles.size(); i++){
-      int obstacles_index =  (int)xml_obstacles[i][0] +  (int)xml_obstacles[i][1] * n;
+      int obstacles_index =  (int)xml_obstacles[i][0] +  (int)xml_obstacles[i][1] * n +    (int)xml_obstacles[i][2] * n * n;
       obstacles.push_back( obstacles_index);
   }
   planner::Node graph[n*n*n];
@@ -260,7 +260,7 @@ int main(int argc, char** argv)
 
  
       //Launch the kernel to explore the map
-      explore<<<block_size,thread_size>>>(thrust::raw_pointer_cast(q_lists_gpu.data()),  map_gpu, thrust::raw_pointer_cast(new_q_lists_gpu.data()), q_size);
+      explore<<<block_size,thread_size>>>(thrust::raw_pointer_cast(q_lists_gpu.data()),  map_gpu, thrust::raw_pointer_cast(new_q_lists_gpu.data()), thread_size_needed);
       cudaDeviceSynchronize();
       cudaMemcpyFromSymbol(&path_found, path_found_gpu,  sizeof(bool), 0, cudaMemcpyDeviceToHost );
 

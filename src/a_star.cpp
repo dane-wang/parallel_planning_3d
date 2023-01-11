@@ -40,7 +40,7 @@ int main (int argc, char **argv)
     int goal = goal_coord[0] + goal_coord[1] * n + goal_coord[2] * n * n;
 
 	for(int i=0; i< xml_obstacles.size(); i++){
-        int obstacles_index =  (int)xml_obstacles[i][0] +  (int)xml_obstacles[i][1] * n + +  (int)xml_obstacles[i][2] * n * n;
+        int obstacles_index =  (int)xml_obstacles[i][0] +  (int)xml_obstacles[i][1] * n + (int)xml_obstacles[i][2] * n * n;
         obstacles.push_back(obstacles_index);
     }
 
