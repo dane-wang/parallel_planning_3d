@@ -269,10 +269,12 @@ int main(int argc, char** argv)
 
 
       // Remove all element that is not used during the exploration and repeated value
-      
+      thrust::sort(new_q_lists_gpu.begin(), new_q_lists_gpu.end());
       new_q_lists_gpu.erase(thrust::remove_if(new_q_lists_gpu.begin(), new_q_lists_gpu.end(), is_negative()),  new_q_lists_gpu.end() );
       
       new_q_lists_gpu.erase(thrust::unique(new_q_lists_gpu.begin(), new_q_lists_gpu.end()), new_q_lists_gpu.end() );
+
+      // std::cout << "new q size is" << new_q_lists_gpu.size() << std::endl;
       
       // Create new q list based on origional and updated q
       if (q_size <= max_thread_size) {
@@ -284,6 +286,8 @@ int main(int argc, char** argv)
         
         q_lists_gpu.erase(q_lists_gpu.begin(), q_lists_gpu.begin()+max_thread_size );
         q_lists_gpu.insert(q_lists_gpu.end(), new_q_lists_gpu.begin(), new_q_lists_gpu.end() );
+        thrust::sort(q_lists_gpu.begin(), q_lists_gpu.end());
+        q_lists_gpu.erase(thrust::unique(q_lists_gpu.begin(), q_lists_gpu.end()), q_lists_gpu.end() );
         new_q_lists_gpu.clear();
 
         // //sort the q_list based on the f value
@@ -347,10 +351,14 @@ int main(int argc, char** argv)
                 }
             }
         }
+      // thrust::host_vector<int> q_lists1= q_lists_gpu;
+      // thrust::sort(q_lists1.begin(), q_lists1.end());
+      // const bool hasDuplicates = std::adjacent_find(q_lists1.begin(), q_lists1.end()) != q_lists1.end();
+      // std::cout << "Duplicates" << hasDuplicates << std::endl;
       
-      // for (int k =0; k< n*n; k++){
+      // for (int k =0; k< q_lists1.size(); k++){
 
-      //   std::cout<< static_cast<int16_t>(v[k]) << std::endl;
+      //   v[q_lists1[k]] = 2;
 
       // }
       ros::Rate loop_rate(5);

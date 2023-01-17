@@ -221,7 +221,7 @@ void parallel_explore(planner::Node* graph, int n, int start_index, int goal_ind
 
 
     // Remove all element that is not used during the exploration and repeated value
-    
+    thrust::sort(new_q_lists_gpu.begin(), new_q_lists_gpu.end());
     new_q_lists_gpu.erase(thrust::remove_if(new_q_lists_gpu.begin(), new_q_lists_gpu.end(), is_negative()),  new_q_lists_gpu.end() );
     
     new_q_lists_gpu.erase(thrust::unique(new_q_lists_gpu.begin(), new_q_lists_gpu.end()), new_q_lists_gpu.end() );
@@ -237,6 +237,9 @@ void parallel_explore(planner::Node* graph, int n, int start_index, int goal_ind
       
       q_lists_gpu.erase(q_lists_gpu.begin(), q_lists_gpu.begin()+max_thread );
       q_lists_gpu.insert(q_lists_gpu.end(), new_q_lists_gpu.begin(), new_q_lists_gpu.end() );
+      thrust::sort(q_lists_gpu.begin(), q_lists_gpu.end());
+      q_lists_gpu.erase(thrust::unique(q_lists_gpu.begin(), q_lists_gpu.end()), q_lists_gpu.end() );
+    
       new_q_lists_gpu.clear();
 
       // //sort the q_list based on the f value
@@ -244,6 +247,7 @@ void parallel_explore(planner::Node* graph, int n, int start_index, int goal_ind
       get_f<<<1, q_lists_gpu.size()>>>(thrust::raw_pointer_cast(q_lists_gpu.data()),  map_gpu, thrust::raw_pointer_cast(f_value.data()), q_lists_gpu.size() );
       cudaDeviceSynchronize();
       thrust::sort_by_key(f_value.begin(), f_value.end(), q_lists_gpu.begin() );
+      
     }
 
     

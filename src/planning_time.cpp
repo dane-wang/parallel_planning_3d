@@ -56,21 +56,21 @@ int main(int argc, char** argv){
 
   
     // Initialize the obstacles list
-    for(int i=0; i< xml_obstacles.size(); i++){
-        int obstacles_index =  (int)xml_obstacles[i][0] +  (int)xml_obstacles[i][1] * n +   (int)xml_obstacles[i][2] * n * n;
-        obstacles.push_back(obstacles_index);
-    }
+    // for(int i=0; i< xml_obstacles.size(); i++){
+    //     int obstacles_index =  (int)xml_obstacles[i][0] +  (int)xml_obstacles[i][1] * n +   (int)xml_obstacles[i][2] * n * n;
+    //     obstacles.push_back(obstacles_index);
+    // }
 
-    // Initialize the hidden obstacles list
-    for(int i=0; i< xml_hidden_obstacles.size(); i++){
-        int hidden_obstacles_index =  (int)xml_hidden_obstacles[i][0] +  (int)xml_hidden_obstacles[i][1] * n + (int)xml_hidden_obstacles[i][2] * n * n;
-        hidden_obstacles.push_back( hidden_obstacles_index);
-    }
+    // // Initialize the hidden obstacles list
+    // for(int i=0; i< xml_hidden_obstacles.size(); i++){
+    //     int hidden_obstacles_index =  (int)xml_hidden_obstacles[i][0] +  (int)xml_hidden_obstacles[i][1] * n + (int)xml_hidden_obstacles[i][2] * n * n;
+    //     hidden_obstacles.push_back( hidden_obstacles_index);
+    // }
 
     planner::Node graph[n*n*n];
-    planner::Node graph_copy[n*n*n];
+    // planner::Node graph_copy[n*n*n];
     planner::map_generation(&graph[0], n, start, goal, obstacles);
-    planner::add_hidden_obstacles(&graph[0], hidden_obstacles);
+    // planner::add_hidden_obstacles(&graph[0], hidden_obstacles);
 
     
     
@@ -90,15 +90,17 @@ int main(int argc, char** argv){
         {
            
             if (!path_found){
-                std::copy(graph, graph+n*n*n, graph_copy);
+                
+                // planner::Node graph_copy[n*n*n];
+                // std::copy(graph, graph+n*n*n, graph_copy);
                 auto start_time = std::chrono::high_resolution_clock::now();
                 // std::cout << current << std::endl;
                 if (use_parallel_planning) 
                 {
-                    parallel_explore(&graph_copy[0], n, current, goal, max_thread_size, path);
+                    parallel_explore(&graph[0], n, current, goal, max_thread_size, path);
                 }
                 else{
-                    planner::sequential_explore(&graph_copy[0], n, current, goal, path);
+                    planner::sequential_explore(&graph[0], n, current, goal, path);
                 }
                 auto stop = std::chrono::high_resolution_clock::now();
                 float duration = std::chrono::duration<float, std::milli>(stop - start_time).count();
@@ -112,7 +114,7 @@ int main(int argc, char** argv){
             //Check for hidden obstacles
             current = path.back();
             path.pop_back();
-            planner::obstacle_detection(current, &graph[0], n);
+            // planner::obstacle_detection(current, &graph[0], n);
             // std::cout<< "Path length is "<<current<< std::endl;
 
             
@@ -154,7 +156,7 @@ int main(int argc, char** argv){
             
         
             pub.publish(map);
-            // ros::spinOnce(); 
+            ros::spinOnce(); 
             loop_rate.sleep(); 
             if (!path.empty()){
                 //Check if we will hit obstacles on our path
