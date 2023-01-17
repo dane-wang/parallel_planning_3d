@@ -84,6 +84,8 @@ __global__ void explore(T* q,  planner::Node* graph, T* new_q, int q_size  )
         
         
         int new_index = explored_index + neighbor_gpu[i];
+        if (new_index<0 || new_index >= n*n*n) continue;
+
         float cost;
         
         if (i<6){

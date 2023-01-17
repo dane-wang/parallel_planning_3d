@@ -25,6 +25,17 @@ namespace planner
 
     };
 
+    struct priority_queue_compare
+    {   
+        // queue elements are vectors so we need to compare those
+        bool operator()(std::vector<float> const& a, std::vector<float> const& b) const
+        {
+
+            // reverse sort puts the lowest value at the top    
+            return a[1] > b[1];
+        }
+    };
+
     //Calculate the heuristic value for newly explored node
     float h_calculation(Node* Node1, Node* Node2);
 

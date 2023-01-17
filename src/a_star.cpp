@@ -3,6 +3,7 @@
 // #include "geometry_msgs/Point.h"
 #include <time.h>  
 #include <vector>
+#include <queue>
 #include "std_msgs/Int8MultiArray.h"
 
 #include "parallel_planning_3d/planner.h"
@@ -44,15 +45,17 @@ int main (int argc, char **argv)
         obstacles.push_back(obstacles_index);
     }
 
-	planner::Node graph[n*n*n];
+	planner::Node* graph = new planner::Node[n*n*n];
 
-	planner::map_generation(&graph[0], n, start, goal, obstacles);
+	planner::map_generation(graph, n, start, goal, obstacles);
 
 	bool path_found = false;
 	// std::cout << graph[start].f << std::endl;
 
-	std::vector<std::vector<float> > q_list;
-    q_list.push_back({(float) start, graph[start].f});
+	// std::vector<std::vector<float> > q_list;
+    std::priority_queue< std::vector<float>, std::vector< std::vector<float> >, planner::priority_queue_compare > q_list;
+
+    q_list.push({(float) start, graph[start].f});
 
 	int neighbor[26] = {1, -1, n, -n, n*n, -n*n, n+1, n-1, -n+1, -n-1, n*n+1, n*n-1, n*n+n, n*n-n, -n*n+1, -n*n-1, -n*n+n, -n*n-n, n*n + n + 1, n*n + n- 1,  n*n - n + 1, n*n - n -1, -(n*n + n + 1), -(n*n + n- 1), -(n*n - n + 1), -(n*n - n -1) };
 
@@ -62,8 +65,8 @@ int main (int argc, char **argv)
 
         while(ros::ok() && q_list.size()!=0 && !path_found){
 
-			auto smallest_node = q_list.back();
-            q_list.pop_back();
+			auto smallest_node = q_list.top();
+            q_list.pop();
 
 			int explored_index = smallest_node[0];
             int floor_index = explored_index%(n*n);
@@ -90,6 +93,8 @@ int main (int argc, char **argv)
                 for (int i=0; i<26; i++)
                 {
                     int new_index = explored_index + neighbor[i];
+
+                    if (new_index<0 || new_index >= n*n*n) continue;
 
                     float cost;
 
@@ -135,7 +140,7 @@ int main (int argc, char **argv)
                         graph[new_index].parent = explored_index;
                         graph[new_index].frontier = true;
 
-                        q_list.push_back({(float) new_index, graph[new_index].f});
+                        q_list.push({(float) new_index, graph[new_index].f});
                     }
                     else if (edge_detect && graph[new_index].obstacle == false && (graph[new_index].frontier == true || graph[new_index].explored == true))
                     {
@@ -144,7 +149,7 @@ int main (int argc, char **argv)
                             graph[new_index].g = graph[explored_index].g + cost;
                             graph[new_index].f = graph[new_index].h + graph[new_index].g;
                             graph[new_index].parent = explored_index;
-                            q_list.push_back({(float) new_index, graph[new_index].f});
+                            q_list.push({(float) new_index, graph[new_index].f});
 
                         }
                     }
@@ -152,7 +157,7 @@ int main (int argc, char **argv)
 
                 }
             
-                std::sort(q_list.begin(), q_list.end(), planner::sortcol);
+                // std::sort(q_list.begin(), q_list.end(), planner::sortcol);
             }
             else{
                 

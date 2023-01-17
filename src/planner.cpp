@@ -3,6 +3,7 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include <queue>
 #include <math.h>
 
 
@@ -81,17 +82,14 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
 
     //Initialize everything
     bool path_found = false;
-    std::vector<std::vector<float> > q_list;
-    // graph[start_index].g = 0;
-    // if (graph[start_index].h == INFINITY) graph[start_index].h = h_calculation(&graph[start_index], &graph[goal_index]);
-    // graph[start_index].f = graph[start_index].g + graph[start_index].h;
-    q_list.push_back({(float) start_index, graph[start_index].f});
+    std::priority_queue< std::vector<float>, std::vector< std::vector<float> >, planner::priority_queue_compare > q_list;
+    q_list.push({(float) start_index, graph[start_index].f});
     int neighbor[26] = {1, -1, n, -n, n*n, -n*n, n+1, n-1, -n+1, -n-1, n*n+1, n*n-1, n*n+n, n*n-n, -n*n+1, -n*n-1, -n*n+n, -n*n-n, n*n + n + 1, n*n + n- 1,  n*n - n + 1, n*n - n -1, -(n*n + n + 1), -(n*n + n- 1), -(n*n - n + 1), -(n*n - n -1) };
 
     while(q_list.size()!=0 && !path_found){
         // pop the node with smallest node
-        auto smallest_node = q_list.back();
-        q_list.pop_back();
+        auto smallest_node = q_list.top();
+        q_list.pop();
 
         int explored_index = smallest_node[0];
         int floor_index = explored_index%(n*n);
@@ -121,6 +119,7 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
             for (int i=0; i<26; i++)
             {
                 int new_index = explored_index + neighbor[i];
+                if (new_index<0 || new_index >= n*n*n) continue;
 
                 float cost;
 
@@ -165,7 +164,7 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
                     graph[new_index].parent = explored_index;
                     graph[new_index].frontier = true;
 
-                    q_list.push_back({(float) new_index, graph[new_index].f});
+                    q_list.push({(float) new_index, graph[new_index].f});
                 }
                 else if (edge_detect && graph[new_index].obstacle == false && (graph[new_index].frontier == true || graph[new_index].explored == true))
                 {
@@ -174,7 +173,7 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
                         graph[new_index].g = graph[explored_index].g + cost;
                         graph[new_index].f = graph[new_index].h + graph[new_index].g;
                         graph[new_index].parent = explored_index;
-                        q_list.push_back({(float) new_index, graph[new_index].f});
+                        q_list.push({(float) new_index, graph[new_index].f});
 
                     }
                 }
@@ -182,7 +181,7 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
 
             }
         
-            std::sort(q_list.begin(), q_list.end(), planner::sortcol);
+            // std::sort(q_list.begin(), q_list.end(), planner::sortcol);
         }
         else{
             int path1 = goal_index;

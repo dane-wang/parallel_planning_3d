@@ -3,6 +3,7 @@
 // #include "geometry_msgs/Point.h"
 #include <time.h>  
 #include <vector>
+#include <queue>
 #include "parallel_planning_3d/planner.h"
 #include "std_msgs/Int8MultiArray.h"
 #include <algorithm>
@@ -27,7 +28,7 @@ int main(int argc, char** argv){
 
     // 发布消息 话题名字 队列大小
 	ros::Publisher pub = nh.advertise<std_msgs::Int8MultiArray> ("planning_info", 100, ros::init_options::AnonymousName);
-    ros::Rate loop_rate(1);
+    ros::Rate loop_rate(5);
 
     std_msgs::Int8MultiArray map;
     
@@ -67,16 +68,19 @@ int main(int argc, char** argv){
     //     hidden_obstacles.push_back( hidden_obstacles_index);
     // }
 
-    planner::Node graph[n*n*n];
+    planner::Node* graph = new planner::Node[n*n*n];
+
+	planner::map_generation(graph, n, start, goal, obstacles);
+
     // planner::Node graph_copy[n*n*n];
-    planner::map_generation(&graph[0], n, start, goal, obstacles);
+   
     // planner::add_hidden_obstacles(&graph[0], hidden_obstacles);
 
     
     
     std::vector<int> path;
 
-    gpu_warmup();
+    if (use_parallel_planning) gpu_warmup();
 
     // parallel_dijkstra(&graph[0], n, goal, max_thread_size);
 
@@ -97,10 +101,10 @@ int main(int argc, char** argv){
                 // std::cout << current << std::endl;
                 if (use_parallel_planning) 
                 {
-                    parallel_explore(&graph[0], n, current, goal, max_thread_size, path);
+                    parallel_explore(graph, n, current, goal, max_thread_size, path);
                 }
                 else{
-                    planner::sequential_explore(&graph[0], n, current, goal, path);
+                    planner::sequential_explore(graph, n, current, goal, path);
                 }
                 auto stop = std::chrono::high_resolution_clock::now();
                 float duration = std::chrono::duration<float, std::milli>(stop - start_time).count();

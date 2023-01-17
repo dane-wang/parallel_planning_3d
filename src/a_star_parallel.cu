@@ -86,6 +86,8 @@ __global__ void explore(T* q,  planner::Node* graph, T* new_q, int q_size  )
         
         
         int new_index = explored_index + neighbor_gpu[i];
+        if (new_index<0 || new_index >= n*n*n) continue;
+
         float cost;
         
         if (i<6){
@@ -193,9 +195,10 @@ int main(int argc, char** argv)
       int obstacles_index =  (int)xml_obstacles[i][0] +  (int)xml_obstacles[i][1] * n +    (int)xml_obstacles[i][2] * n * n;
       obstacles.push_back( obstacles_index);
   }
-  planner::Node graph[n*n*n];
 
-  planner::map_generation(&graph[0], n, start, goal, obstacles);
+  planner::Node* graph = new planner::Node[n*n*n];
+
+	planner::map_generation(graph, n, start, goal, obstacles);
 
   int path1 = goal;
   bool path_found = false;
@@ -217,7 +220,7 @@ int main(int argc, char** argv)
   int neighbor[26] = {1, -1, n, -n, n*n, -n*n, n+1, n-1, -n+1, -n-1, n*n+1, n*n-1, n*n+n, n*n-n, -n*n+1, -n*n-1, -n*n+n, -n*n-n, n*n + n + 1, n*n + n- 1,  n*n - n + 1, n*n - n -1, -(n*n + n + 1), -(n*n + n- 1), -(n*n - n + 1), -(n*n - n -1) };
 
   cudaMalloc( (void**)&map_gpu, map_size );
-  cudaMemcpy(map_gpu, &graph, map_size, cudaMemcpyHostToDevice);
+  cudaMemcpy(map_gpu, graph, map_size, cudaMemcpyHostToDevice);
 
   cudaMemcpyToSymbol(path_found_gpu, &path_found,  sizeof(bool));
   cudaMemcpyToSymbol(neighbor_gpu, &neighbor,  26*sizeof(int));
@@ -265,7 +268,7 @@ int main(int argc, char** argv)
       cudaMemcpyFromSymbol(&path_found, path_found_gpu,  sizeof(bool), 0, cudaMemcpyDeviceToHost );
 
       
-      cudaMemcpy(&graph, map_gpu,  map_size, cudaMemcpyDeviceToHost );
+      cudaMemcpy(graph, map_gpu,  map_size, cudaMemcpyDeviceToHost );
 
 
       // Remove all element that is not used during the exploration and repeated value
