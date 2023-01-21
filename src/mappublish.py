@@ -80,7 +80,7 @@ if __name__ == '__main__':
     rospy.Subscriber("planning_info", Int8MultiArray, mapcallback, queue_size=1000, buff_size=1000)
     
     pub = rospy.Publisher('map', PointCloud2, queue_size=100)
-    rate = rospy.Rate(10)
+    rate = rospy.Rate(30)
     rospy.spin()
 
   

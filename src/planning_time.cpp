@@ -12,6 +12,7 @@
 #include <iostream>
 #include <queue>
 #include "parallel_planning_3d/parallel_explore.cuh"
+#include <random>
 
 #include <chrono>
 
@@ -33,20 +34,59 @@ int main(int argc, char** argv){
     std_msgs::Int8MultiArray map;
     
     //generate map info from the config file
-    int n, max_thread_size, use_parallel_planning;
+    int n, max_thread_size, use_parallel_planning, use_random_obstacles;
     std::vector<int> start_coord, goal_coord;
     std::vector<int> obstacles;
     std::vector<int> hidden_obstacles;
-    XmlRpc::XmlRpcValue xml_obstacles;
+    
     XmlRpc::XmlRpcValue xml_hidden_obstacles;
 
     ros::param::get("map_size", n);
     ros::param::get("start_position", start_coord);
     ros::param::get("goal_position", goal_coord);
-    ros::param::get("obstacles", xml_obstacles);
+  
     ros::param::get("hidden_obstacles", xml_hidden_obstacles);
     ros::param::get("max_thread", max_thread_size);
     ros::param::get("use_parallel", use_parallel_planning);
+    ros::param::get("use_random_obstacles", use_random_obstacles);
+
+    if(use_random_obstacles){
+
+        float ratio;
+        ros::param::get("random_obstacles_ratio", ratio);
+
+        int obstacle_size = ratio * n*n*n;
+
+        
+
+        // First create an instance of an engine.
+        std::random_device rnd_device;
+        // Specify the engine and distribution.
+        std::mt19937 mersenne_engine {rnd_device()};  // Generates random integers
+        std::uniform_int_distribution<int> dist {0, n*n*n-1};
+        
+        auto gen = [&dist, &mersenne_engine](){
+                    return dist(mersenne_engine);
+                };
+
+        
+        std::vector<int> vec(obstacle_size);
+        std::generate(std::begin(vec), std::end(vec), gen);
+        
+        obstacles = vec;
+        
+
+        
+
+    }
+    else{
+        XmlRpc::XmlRpcValue xml_obstacles;
+        ros::param::get("obstacles", xml_obstacles);
+        for(int i=0; i< xml_obstacles.size(); i++){
+            int obstacles_index =  (int)xml_obstacles[i][0] +  (int)xml_obstacles[i][1] * n + (int)xml_obstacles[i][2] * n * n;
+            obstacles.push_back(obstacles_index);
+        }
+    }
     
 
     // Initialize the start and goal node
@@ -54,6 +94,7 @@ int main(int argc, char** argv){
     int goal = planner::coordtoindex(goal_coord, n);
     int current = start;
     bool path_found = false;
+    bool no_path = false;
 
   
     // Initialize the obstacles list
@@ -90,7 +131,7 @@ int main(int argc, char** argv){
   
 
     while (ros::ok()){
-        while (ros::ok() && current!=goal)
+        while (ros::ok() && current!=goal && !no_path)
         {
            
             if (!path_found){
@@ -110,14 +151,19 @@ int main(int argc, char** argv){
                 float duration = std::chrono::duration<float, std::milli>(stop - start_time).count();
                 // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start_time);
                 std::cout << "Exectuation time is " << duration << std::endl;
-                std::cout<< "Path length is "<<path.size()<< std::endl;
-                path_found = true;
+                
+                if (path.size()==0){
+                    no_path = true;
+                    
+                }
+                else{
+                    std::cout<< "Path length is "<<path.size()<< std::endl;
+                    path_found = true;
 
+                }
+                
             }
-           
-            //Check for hidden obstacles
-            current = path.back();
-            path.pop_back();
+            
             // planner::obstacle_detection(current, &graph[0], n);
             // std::cout<< "Path length is "<<current<< std::endl;
 
@@ -125,10 +171,16 @@ int main(int argc, char** argv){
 
             std::vector<int8_t> v(n*n*n, 0);
 
-            for (int k =0; k< path.size(); k++){
+            if (!no_path){
+                current = path.back();
+                path.pop_back();
+                for (int k =0; k< path.size(); k++){
+                    v[path[k]] = 3;
+                }
 
-                v[path[k]] = 3;
             }
+
+           
             
             for (int z=0; z<n; z++)
             {
@@ -178,11 +230,11 @@ int main(int argc, char** argv){
             
         }
 
-        if (current == goal){
-            pub.publish(map);
-            ros::spinOnce(); 
-            loop_rate.sleep(); 
-        }
+
+        pub.publish(map);
+        ros::spinOnce(); 
+        loop_rate.sleep(); 
+
             
 
         

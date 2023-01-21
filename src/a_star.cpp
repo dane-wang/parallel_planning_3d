@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <xmlrpcpp/XmlRpcValue.h>
 #include <cmath>
+#include <random>
 
 int main (int argc, char **argv) 
 {
@@ -25,25 +26,58 @@ int main (int argc, char **argv)
     std_msgs::Int8MultiArray map;
 	
     //generate map info from the config file
-    int n;
+    int n, use_random_obstacles;
     std::vector<int> start_coord, goal_coord;
     std::vector<int> obstacles;
-    XmlRpc::XmlRpcValue xml_obstacles;
+    
 
     ros::param::get("map_size", n);
     ros::param::get("start_position", start_coord);
     ros::param::get("goal_position", goal_coord);
-    ros::param::get("obstacles", xml_obstacles);
+    ros::param::get("use_random_obstacles", use_random_obstacles);
+
+    if(use_random_obstacles){
+
+        float ratio;
+        ros::param::get("random_obstacles_ratio", ratio);
+
+        int obstacle_size = ratio * n*n*n;
+
+        std::cout<<"obstacle "<< obstacle_size<< std::endl;
+
+        // First create an instance of an engine.
+        std::random_device rnd_device;
+        // Specify the engine and distribution.
+        std::mt19937 mersenne_engine {rnd_device()};  // Generates random integers
+        std::uniform_int_distribution<int> dist {0, n*n*n-1};
+        
+        auto gen = [&dist, &mersenne_engine](){
+                    return dist(mersenne_engine);
+                };
+
+        
+        std::vector<int> vec(obstacle_size);
+        std::generate(std::begin(vec), std::end(vec), gen);
+        obstacles = vec;
+
+        
+
+    }
+    else{
+        XmlRpc::XmlRpcValue xml_obstacles;
+        ros::param::get("obstacles", xml_obstacles);
+        for(int i=0; i< xml_obstacles.size(); i++){
+            int obstacles_index =  (int)xml_obstacles[i][0] +  (int)xml_obstacles[i][1] * n + (int)xml_obstacles[i][2] * n * n;
+            obstacles.push_back(obstacles_index);
+        }
+    }
     
 
     // Initialize the start and goal node
     int start = start_coord[0]+ start_coord[1] * n + start_coord[2] * n * n;
     int goal = goal_coord[0] + goal_coord[1] * n + goal_coord[2] * n * n;
 
-	for(int i=0; i< xml_obstacles.size(); i++){
-        int obstacles_index =  (int)xml_obstacles[i][0] +  (int)xml_obstacles[i][1] * n + (int)xml_obstacles[i][2] * n * n;
-        obstacles.push_back(obstacles_index);
-    }
+	
 
 	planner::Node* graph = new planner::Node[n*n*n];
 
@@ -202,7 +236,7 @@ int main (int argc, char **argv)
                 }
             }
             
-            ros::Rate loop_rate(5);
+            ros::Rate loop_rate(30);
             
             map.data = v;
         
@@ -210,6 +244,7 @@ int main (int argc, char **argv)
             pub.publish(map);
             loop_rate.sleep(); 
 
+            if (q_list.size()==0) std::cout<<"NO PATH IS FOUND" <<std::endl;
             
 
 
@@ -217,12 +252,12 @@ int main (int argc, char **argv)
 
 		}
 
-        if (path_found){
-            ros::Rate loop_rate(5);
-            pub.publish(map);
-            loop_rate.sleep(); 
+       
+        ros::Rate loop_rate(5);
+        pub.publish(map);
+        loop_rate.sleep(); 
 
-        }
+        
 
         
 

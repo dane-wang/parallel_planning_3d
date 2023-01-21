@@ -19,6 +19,7 @@
 #include <thrust/extrema.h>
 #include <thrust/merge.h>
 #include <queue>
+#include <random>
 
 
 __device__ bool path_found_gpu;
@@ -86,6 +87,7 @@ __global__ void explore(T* q,  planner::Node* graph, T* new_q, int q_size  )
         
         
         int new_index = explored_index + neighbor_gpu[i];
+        
         if (new_index<0 || new_index >= n*n*n) continue;
 
         float cost;
@@ -174,27 +176,58 @@ int main(int argc, char** argv)
   
 
   //generate map info from the config file
-  int n, max_thread_size;
+  int n, max_thread_size, use_random_obstacles;
   std::vector<int> start_coord, goal_coord;
   std::vector<int> obstacles;
-  XmlRpc::XmlRpcValue xml_obstacles;
+ 
 
   ros::param::get("map_size", n);
   ros::param::get("start_position", start_coord);
   ros::param::get("goal_position", goal_coord);
-  ros::param::get("obstacles", xml_obstacles);
+  ros::param::get("use_random_obstacles", use_random_obstacles);
   ros::param::get("max_thread", max_thread_size);
 
   // Initialize the start and goal node
   int start = start_coord[0]+ start_coord[1] * n + start_coord[2] * n * n;
   int goal = goal_coord[0] + goal_coord[1] * n + goal_coord[2] * n * n;
 
+  if(use_random_obstacles){
 
-  // Initialize the obstacles list
-  for(int i=0; i< xml_obstacles.size(); i++){
-      int obstacles_index =  (int)xml_obstacles[i][0] +  (int)xml_obstacles[i][1] * n +    (int)xml_obstacles[i][2] * n * n;
-      obstacles.push_back( obstacles_index);
+        float ratio;
+        ros::param::get("random_obstacles_ratio", ratio);
+
+        int obstacle_size = ratio * n*n*n;
+
+        // std::cout<<"obstacle "<< obstacle_size<< std::endl;
+
+        // First create an instance of an engine.
+        std::random_device rnd_device;
+        // Specify the engine and distribution.
+        std::mt19937 mersenne_engine {rnd_device()};  // Generates random integers
+        std::uniform_int_distribution<int> dist {0, n*n*n-1};
+        
+        auto gen = [&dist, &mersenne_engine](){
+                    return dist(mersenne_engine);
+                };
+
+        
+        std::vector<int> vec(obstacle_size);
+        std::generate(std::begin(vec), std::end(vec), gen);
+        obstacles = vec;
+
+        
+
+    }
+    else{
+
+        XmlRpc::XmlRpcValue xml_obstacles;
+        ros::param::get("obstacles", xml_obstacles);
+        for(int i=0; i< xml_obstacles.size(); i++){
+            int obstacles_index =  (int)xml_obstacles[i][0] +  (int)xml_obstacles[i][1] * n + (int)xml_obstacles[i][2] * n * n;
+            obstacles.push_back(obstacles_index);
+        }
   }
+
 
   planner::Node* graph = new planner::Node[n*n*n];
 
@@ -202,9 +235,6 @@ int main(int argc, char** argv)
 
   int path1 = goal;
   bool path_found = false;
-
-
-  
 
   // Start to work with CUDA
   thrust::host_vector<int> q_lists;
@@ -238,7 +268,7 @@ int main(int argc, char** argv)
     while(ros::ok() && q_lists_gpu.size()!=0 && !path_found){
 
       int q_size = q_lists_gpu.size();
-      std::cout << "q size is" << q_size << std::endl;
+      // std::cout << "q size is" << q_size << std::endl;
 
       
       
@@ -272,9 +302,9 @@ int main(int argc, char** argv)
 
 
       // Remove all element that is not used during the exploration and repeated value
-      thrust::sort(new_q_lists_gpu.begin(), new_q_lists_gpu.end());
-      new_q_lists_gpu.erase(thrust::remove_if(new_q_lists_gpu.begin(), new_q_lists_gpu.end(), is_negative()),  new_q_lists_gpu.end() );
       
+      new_q_lists_gpu.erase(thrust::remove_if(new_q_lists_gpu.begin(), new_q_lists_gpu.end(), is_negative()),  new_q_lists_gpu.end() );
+      thrust::sort(new_q_lists_gpu.begin(), new_q_lists_gpu.end());
       new_q_lists_gpu.erase(thrust::unique(new_q_lists_gpu.begin(), new_q_lists_gpu.end()), new_q_lists_gpu.end() );
 
       // std::cout << "new q size is" << new_q_lists_gpu.size() << std::endl;
@@ -376,13 +406,15 @@ int main(int argc, char** argv)
       pub.publish(map);
       loop_rate.sleep(); 
 
-    }
-    if (path_found){
-      ros::Rate loop_rate(5);
-      pub.publish(map);
-      loop_rate.sleep(); 
+      if (q_lists_gpu.size()==0) std::cout<<"NO PATH IS FOUND" <<std::endl;
+            
 
-  }
+
+    }
+    
+    ros::Rate loop_rate(5);
+    pub.publish(map);
+    loop_rate.sleep(); 
 
   }
 

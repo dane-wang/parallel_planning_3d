@@ -6,12 +6,12 @@
  </node>
 
 <!-- Start the map publishing node -->
- <!-- <node name="map_publisher" pkg="parallel_planning_3d" type="mappublish.py" output="screen">
- </node> -->
+ <node name="map_publisher" pkg="parallel_planning_3d" type="mappublish.py" output="screen">
+ </node>
 
 <!-- Start RVIZ for visualization -->
 <!-- 在rviz中显示-->
-<!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find parallel_planning_3d)/configs/3d_planning_visualization.rviz" required="true" /> -->
+<node name="rviz" pkg="rviz" type="rviz" args="-d $(find parallel_planning_3d)/configs/3d_planning_visualization.rviz" required="true" />
 
 
 </launch>

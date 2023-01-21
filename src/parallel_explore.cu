@@ -223,9 +223,9 @@ void parallel_explore(planner::Node* graph, int n, int start_index, int goal_ind
 
 
     // Remove all element that is not used during the exploration and repeated value
-    thrust::sort(new_q_lists_gpu.begin(), new_q_lists_gpu.end());
-    new_q_lists_gpu.erase(thrust::remove_if(new_q_lists_gpu.begin(), new_q_lists_gpu.end(), is_negative()),  new_q_lists_gpu.end() );
     
+    new_q_lists_gpu.erase(thrust::remove_if(new_q_lists_gpu.begin(), new_q_lists_gpu.end(), is_negative()),  new_q_lists_gpu.end() );
+    thrust::sort(new_q_lists_gpu.begin(), new_q_lists_gpu.end());
     new_q_lists_gpu.erase(thrust::unique(new_q_lists_gpu.begin(), new_q_lists_gpu.end()), new_q_lists_gpu.end() );
     
     
@@ -281,6 +281,8 @@ void parallel_explore(planner::Node* graph, int n, int start_index, int goal_ind
     }
   }
 
+  if (q_lists_gpu.size()==0) std::cout<< "NO PATH IS FOUND" <<std::endl;        
+    
 
  
 }

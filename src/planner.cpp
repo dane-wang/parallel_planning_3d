@@ -42,7 +42,10 @@ void planner::map_generation(planner::Node* graph, int n, int start, int goal, s
     // graph[goal].h = 0;
 
     for (int i =0; i<obstacles.size(); i++){
-        graph[obstacles[i]].obstacle = true;
+        if (graph[obstacles[i]].start==false && graph[obstacles[i]].goal==false){
+            graph[obstacles[i]].obstacle = true;
+        }
+        
     }
 
 
@@ -159,7 +162,7 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
                 if (graph[new_index].obstacle == false && graph[new_index].frontier == false && graph[new_index].explored == false && edge_detect)
                 {
                     graph[new_index].g = graph[explored_index].g + cost;
-                    if (graph[new_index].h == INFINITY) graph[new_index].h = planner::h_calculation(&graph[new_index], &graph[goal_index]);
+                    graph[new_index].h = planner::h_calculation(&graph[new_index], &graph[goal_index]);
                     graph[new_index].f = graph[new_index].h + graph[new_index].g;
                     graph[new_index].parent = explored_index;
                     graph[new_index].frontier = true;
@@ -195,7 +198,8 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
         }
         //std::cout << q_list.size() << std::endl;
         
-    }        
+    }
+    if (q_list.size()==0) std::cout<< "NO PATH IS FOUND" <<std::endl;        
     
 }
 
