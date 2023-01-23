@@ -5,7 +5,7 @@
 #include <vector>
 #include <queue>
 #include <math.h>
-
+#include <random>
 
 float planner::h_calculation(planner::Node* Node1, planner::Node* Node2){
 
@@ -41,12 +41,13 @@ void planner::map_generation(planner::Node* graph, int n, int start, int goal, s
     graph[goal].goal = true;
     // graph[goal].h = 0;
 
-    for (int i =0; i<obstacles.size(); i++){
-        if (graph[obstacles[i]].start==false && graph[obstacles[i]].goal==false){
-            graph[obstacles[i]].obstacle = true;
-        }
+    // for (int i =0; i<obstacles.size(); i++){
+    //     if (graph[obstacles[i]].start==false && graph[obstacles[i]].goal==false){
+    //         graph[obstacles[i]].obstacle = true;
+    //     }
         
-    }
+    // }
+    planner::random_obstacle_block(graph, n, start, goal, obstacles);
 
 
 }
@@ -86,6 +87,9 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
     //Initialize everything
     bool path_found = false;
     std::priority_queue< std::vector<float>, std::vector< std::vector<float> >, planner::priority_queue_compare > q_list;
+    graph[start_index].g = 0;
+    graph[start_index].h = planner::h_calculation(&graph[start_index], &graph[goal_index]);
+    graph[start_index].f = graph[start_index].g + graph[start_index].h;
     q_list.push({(float) start_index, graph[start_index].f});
     int neighbor[26] = {1, -1, n, -n, n*n, -n*n, n+1, n-1, -n+1, -n-1, n*n+1, n*n-1, n*n+n, n*n-n, -n*n+1, -n*n-1, -n*n+n, -n*n-n, n*n + n + 1, n*n + n- 1,  n*n - n + 1, n*n - n -1, -(n*n + n + 1), -(n*n + n- 1), -(n*n - n + 1), -(n*n - n -1) };
 
@@ -243,4 +247,128 @@ void planner::obstacle_detection(int current, planner::Node* graph, int n){
 
 }
 
+
+void planner::random_obstacle_block(planner::Node* graph, int n, int start_index, int goal_index, std::vector<int>& obstacle){
+
+    for (int i=0; i<obstacle.size(); i++){
+
+        int obstacle_index = obstacle[i];
+        std::vector<int> obstacle_coord = planner::indextocoord(obstacle_index, n);
+        std::vector<int> start_coord = planner::indextocoord(start_index, n);
+        std::vector<int> goal_coord = planner::indextocoord(goal_index, n);
+        std::vector<int> obstacle_size(3);
+
+        std::random_device rnd_device;
+        // Specify the engine and distribution.
+        std::mt19937 mersenne_engine {rnd_device()};  // Generates random integers
+        std::uniform_int_distribution<int> dist {3, (int) n/5};
+        
+        auto gen = [&dist, &mersenne_engine](){
+                    return dist(mersenne_engine);
+                };
+
+        
+        std::generate(std::begin(obstacle_size), std::end(obstacle_size), gen);
+
+        std::vector<int> start_dis(3), goal_dis(3);
+
+        bool appropriate_obstacle = true;
+
+        for (int j=0; j<3; j++){
+            int a,b;
+            a = start_coord[j] - obstacle_coord[j];
+            b = goal_coord[j] - obstacle_coord[j];
+
+            if ((a>0 && a<= obstacle_size[j]) || (b>0 && b<= obstacle_size[j])) appropriate_obstacle = false;
+
+        }
+
+        if (!appropriate_obstacle) continue;
+
+        for (int x=0; x<obstacle_size[0]; x++){
+            for (int y=0; y<obstacle_size[1]; y++){
+                for (int z=0; z<obstacle_size[2]; z++){
+
+                    if ((obstacle_coord[0]+x < n) && (obstacle_coord[1]+y < n) && (obstacle_coord[2]+z < n)){
+
+                        std::vector<int> new_coord = {obstacle_coord[0]+x, obstacle_coord[1]+y, obstacle_coord[2]+z};
+                        int new_index = planner::coordtoindex(new_coord, n);
+
+                        graph[new_index].obstacle = true;
+
+                    }
+
+
+                }
+            }
+        }
+
+
+
+
+    }
+
+
+
+}
+
+void planner::clear_obstacle_block(planner::Node* graph, int n, int current, int goal,  std::vector<int>& obstacle){
+
+
+
+    // for (int z=0; z<n; z++){
+    //     for (int y =0; y<n; y++){
+
+    //         for (int x=0; x<n; x++){
+
+    //             graph[z*n*n + y*n+x].path = false;
+    //             graph[z*n*n + y*n+x].explored = false;
+    //             graph[z*n*n + y*n+x].frontier = false;
+    //             graph[z*n*n + y*n+x].h = INFINITY;
+    //             graph[z*n*n + y*n+x].g = INFINITY;
+    //             graph[z*n*n + y*n+x].f = INFINITY;
+    //             graph[z*n*n + y*n+x].parent= 0;
+            
+                
+    //         }
+    //     }
+    // }
+    // graph[start].start = true;
+    // graph[current].g = 0;
+    // graph[current].h = h_calculation(&graph[current], &graph[goal]);
+    // graph[current].f = graph[current].h + graph[current].g;
+    // graph[start].explored = true;
+
+    // graph[goal].goal = true;
+
+
+
+    for (int i=0; i<obstacle.size(); i++){
+
+        int obstacle_index = obstacle[i];
+        std::vector<int> obstacle_coord = planner::indextocoord(obstacle_index, n);
+        int size = (int) n/5;
+
+        for (int x=0; x<size; x++){
+            for (int y=0; y<size; y++){
+                for (int z=0; z<size; z++){
+
+                    if ((obstacle_coord[0]+x < n) && (obstacle_coord[1]+y < n) && (obstacle_coord[2]+z < n)){
+
+                        std::vector<int> new_coord = {obstacle_coord[0]+x, obstacle_coord[1]+y, obstacle_coord[2]+z};
+                        int new_index = planner::coordtoindex(new_coord, n);
+
+                        graph[new_index].obstacle = false;
+
+                    }
+
+
+                }
+            }
+        }
+
+
+    }
+
+}
 

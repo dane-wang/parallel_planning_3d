@@ -41,7 +41,7 @@ int main (int argc, char **argv)
         float ratio;
         ros::param::get("random_obstacles_ratio", ratio);
 
-        int obstacle_size = ratio * n*n*n;
+        int obstacle_size = ratio * n;
 
         std::cout<<"obstacle "<< obstacle_size<< std::endl;
 

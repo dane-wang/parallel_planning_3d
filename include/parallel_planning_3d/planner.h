@@ -59,6 +59,9 @@ namespace planner
     //Check if there is a hidden obstracle nearby
     void obstacle_detection(int current, planner::Node* graph, int n);
 
+    void random_obstacle_block(planner::Node* graph, int n, int start_index, int goal_index, std::vector<int>& obstacle);
+
+    void clear_obstacle_block(planner::Node* graph, int n, int current, int goal,  std::vector<int>& obstacle);
 
 
 }

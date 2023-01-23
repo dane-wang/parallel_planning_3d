@@ -34,7 +34,7 @@ int main(int argc, char** argv){
     std_msgs::Int8MultiArray map;
     
     //generate map info from the config file
-    int n, max_thread_size, use_parallel_planning, use_random_obstacles;
+    int n, max_thread_size, use_parallel_planning, use_random_obstacles, dynamtic_obstacles;
     std::vector<int> start_coord, goal_coord;
     std::vector<int> obstacles;
     std::vector<int> hidden_obstacles;
@@ -49,15 +49,14 @@ int main(int argc, char** argv){
     ros::param::get("max_thread", max_thread_size);
     ros::param::get("use_parallel", use_parallel_planning);
     ros::param::get("use_random_obstacles", use_random_obstacles);
+    ros::param::get("dynamtic_obstacles", dynamtic_obstacles);
 
     if(use_random_obstacles){
 
         float ratio;
         ros::param::get("random_obstacles_ratio", ratio);
 
-        int obstacle_size = ratio * n*n*n;
-
-        
+        int obstacle_size = ratio * n;
 
         // First create an instance of an engine.
         std::random_device rnd_device;
@@ -95,6 +94,8 @@ int main(int argc, char** argv){
     int current = start;
     bool path_found = false;
     bool no_path = false;
+    int step = 0;
+    bool waiting_for_new_obstacles = false;
 
   
     // Initialize the obstacles list
@@ -125,6 +126,41 @@ int main(int argc, char** argv){
 
     // parallel_dijkstra(&graph[0], n, goal, max_thread_size);
 
+    planner::clear_obstacle_block(graph, n, current, goal, obstacles);
+    obstacles.clear();
+
+    float ratio;
+    ros::param::get("random_obstacles_ratio", ratio);
+
+    int obstacle_size = ratio * n;
+
+    // First create an instance of an engine.
+    std::random_device rnd_device;
+    // Specify the engine and distribution.
+    std::mt19937 mersenne_engine {rnd_device()};  // Generates random integers
+    std::uniform_int_distribution<int> dist {0, n*n*n-1};
+
+    auto gen = [&dist, &mersenne_engine](){
+                return dist(mersenne_engine);
+            };
+
+    std::vector<int> vec1(obstacle_size);
+    std::generate(std::begin(vec1), std::end(vec1), gen);
+
+    obstacles = vec1;
+
+    // planner::map_generation(graph1, n, current, goal, obstacles);
+    // // graph1[current].start = false;
+    // // graph1[start].start = true;
+
+    // graph = graph1;
+    planner::random_obstacle_block(graph, n, current, goal, obstacles);
+
+    waiting_for_new_obstacles = false;
+    step = 0;
+
+    std::cout<< "new obstacle" << std::endl;
+
   
 
 
@@ -134,26 +170,33 @@ int main(int argc, char** argv){
         while (ros::ok() && current!=goal && !no_path)
         {
            
-            if (!path_found){
+            if (!path_found && !waiting_for_new_obstacles){
                 
-                // planner::Node graph_copy[n*n*n];
-                // std::copy(graph, graph+n*n*n, graph_copy);
+                planner::Node* graph_copy = new planner::Node[n*n*n];
+                std::copy(graph, graph+n*n*n, graph_copy);
                 auto start_time = std::chrono::high_resolution_clock::now();
                 // std::cout << current << std::endl;
                 if (use_parallel_planning) 
                 {
-                    parallel_explore(graph, n, current, goal, max_thread_size, path);
+                    parallel_explore(graph_copy, n, current, goal, max_thread_size, path);
                 }
                 else{
-                    planner::sequential_explore(graph, n, current, goal, path);
+                    planner::sequential_explore(graph_copy, n, current, goal, path);
                 }
                 auto stop = std::chrono::high_resolution_clock::now();
                 float duration = std::chrono::duration<float, std::milli>(stop - start_time).count();
                 // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start_time);
                 std::cout << "Exectuation time is " << duration << std::endl;
+
+                delete[] graph_copy;
                 
                 if (path.size()==0){
-                    no_path = true;
+                    if( dynamtic_obstacles){
+                        waiting_for_new_obstacles = true;
+                    }
+                    else{
+                        no_path = true;
+                    }
                     
                 }
                 else{
@@ -171,14 +214,16 @@ int main(int argc, char** argv){
 
             std::vector<int8_t> v(n*n*n, 0);
 
-            if (!no_path){
+            if (path_found){
                 current = path.back();
                 path.pop_back();
+                
                 for (int k =0; k< path.size(); k++){
                     v[path[k]] = 3;
                 }
 
             }
+            step++;
 
            
             
@@ -214,6 +259,50 @@ int main(int argc, char** argv){
             pub.publish(map);
             ros::spinOnce(); 
             loop_rate.sleep(); 
+
+            if(step>10 && dynamtic_obstacles){
+
+                // delete[] graph;
+                // planner::Node* graph1 = new planner::Node[n*n*n];
+                planner::clear_obstacle_block(graph, n, current, goal, obstacles);
+                obstacles.clear();
+
+                float ratio;
+                ros::param::get("random_obstacles_ratio", ratio);
+
+                int obstacle_size = ratio * n;
+
+                // First create an instance of an engine.
+                std::random_device rnd_device;
+                // Specify the engine and distribution.
+                std::mt19937 mersenne_engine {rnd_device()};  // Generates random integers
+                std::uniform_int_distribution<int> dist {0, n*n*n-1};
+        
+                auto gen = [&dist, &mersenne_engine](){
+                            return dist(mersenne_engine);
+                        };
+
+                std::vector<int> vec1(obstacle_size);
+                std::generate(std::begin(vec1), std::end(vec1), gen);
+        
+                obstacles = vec1;
+
+	            // planner::map_generation(graph1, n, current, goal, obstacles);
+                // // graph1[current].start = false;
+                // // graph1[start].start = true;
+
+                // graph = graph1;
+                planner::random_obstacle_block(graph, n, current, goal, obstacles);
+
+                waiting_for_new_obstacles = false;
+                step = 0;
+
+                std::cout<< "new obstacle" << std::endl;
+
+
+            }
+
+
             if (!path.empty()){
                 //Check if we will hit obstacles on our path
                 for (int i =(path.size()-1); i> (path.size()-5); i--){
@@ -222,7 +311,7 @@ int main(int argc, char** argv){
                         path_found = false;
                         std::cout <<"replanning" << std::endl;
                         path.clear();
-                        break;
+                    
                         }
 
                     }
