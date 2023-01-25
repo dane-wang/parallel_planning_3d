@@ -124,46 +124,6 @@ int main(int argc, char** argv){
 
     if (use_parallel_planning) gpu_warmup();
 
-    // parallel_dijkstra(&graph[0], n, goal, max_thread_size);
-
-    planner::clear_obstacle_block(graph, n, current, goal, obstacles);
-    obstacles.clear();
-
-    float ratio;
-    ros::param::get("random_obstacles_ratio", ratio);
-
-    int obstacle_size = ratio * n;
-
-    // First create an instance of an engine.
-    std::random_device rnd_device;
-    // Specify the engine and distribution.
-    std::mt19937 mersenne_engine {rnd_device()};  // Generates random integers
-    std::uniform_int_distribution<int> dist {0, n*n*n-1};
-
-    auto gen = [&dist, &mersenne_engine](){
-                return dist(mersenne_engine);
-            };
-
-    std::vector<int> vec1(obstacle_size);
-    std::generate(std::begin(vec1), std::end(vec1), gen);
-
-    obstacles = vec1;
-
-    // planner::map_generation(graph1, n, current, goal, obstacles);
-    // // graph1[current].start = false;
-    // // graph1[start].start = true;
-
-    // graph = graph1;
-    planner::random_obstacle_block(graph, n, current, goal, obstacles);
-
-    waiting_for_new_obstacles = false;
-    step = 0;
-
-    std::cout<< "new obstacle" << std::endl;
-
-  
-
-
   
 
     while (ros::ok()){
