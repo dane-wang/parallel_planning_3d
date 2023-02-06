@@ -16,9 +16,11 @@
 
 #include <chrono>
 
-extern "C" void parallel_explore(planner::Node* graph, int n, int start_index, int goal_index, int max_thread, std::vector<int>& path);
-// extern "C" void parallel_dijkstra(planner::Node* graph, int n,  int goal_index, int max_thread);
+
 extern "C" void gpu_warmup();
+
+extern "C" void parallel_bi_explore(planner::BiNode* graph, int n, int start, int goal, int max_thread_size, std::vector<int>& path);
+
 
 
 int main(int argc, char** argv){
@@ -109,9 +111,10 @@ int main(int argc, char** argv){
     //     hidden_obstacles.push_back( hidden_obstacles_index);
     // }
 
-    planner::Node* graph = new planner::Node[n*n*n];
+    planner::BiNode* graph = new planner::BiNode[n*n*n];
 
-  
+ 
+    
     
 
 	planner::map_generation(graph, n, start, goal, obstacles);
@@ -134,19 +137,13 @@ int main(int argc, char** argv){
            
             if (!path_found && !waiting_for_new_obstacles){
                 
-                planner::Node* graph_copy = new planner::Node[n*n*n];
-          
-
+                planner::BiNode* graph_copy = new planner::BiNode[n*n*n];
                 std::copy(graph, graph+n*n*n, graph_copy);
                 auto start_time = std::chrono::high_resolution_clock::now();
                 // std::cout << current << std::endl;
-                if (use_parallel_planning) 
-                {
-                    parallel_explore(graph_copy, n, current, goal, max_thread_size, path);
-                }
-                else{
-                    planner::sequential_explore(graph_copy, n, current, goal, path);
-                }
+            
+                parallel_bi_explore(graph_copy, n, current, goal, max_thread_size, path);
+          
                 auto stop = std::chrono::high_resolution_clock::now();
                 float duration = std::chrono::duration<float, std::milli>(stop - start_time).count();
                 // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start_time);
@@ -156,6 +153,7 @@ int main(int argc, char** argv){
                 
                 if (path.size()==0){
                     if( dynamtic_obstacles){
+                        std::cout<< "Waiting for new obstacles "<< std::endl;
                         waiting_for_new_obstacles = true;
                     }
                     else{
@@ -170,9 +168,11 @@ int main(int argc, char** argv){
                 }
                 
             }
+
+            
             
             // planner::obstacle_detection(current, &graph[0], n);
-            // std::cout<< "Path length is "<<current<< std::endl;
+            // std::cout<< "Current "<<current<< std::endl;
 
             
 
@@ -221,7 +221,7 @@ int main(int argc, char** argv){
             
         
             pub.publish(map);
-            ros::spinOnce(); 
+            // ros::spinOnce(); 
             loop_rate.sleep(); 
 
             if(step>10 && dynamtic_obstacles){

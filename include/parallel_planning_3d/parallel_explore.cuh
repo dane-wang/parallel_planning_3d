@@ -27,4 +27,8 @@ void parallel_explore(planner::Node* graph, int n, int start_index, int goal_ind
 extern "C"
 void gpu_warmup();
 
+extern "C" 
+void parallel_bi_explore(planner::BiNode* graph, int n, int start_index, int goal_index, int max_thread, std::vector<int>& path);
+
+
 #endif

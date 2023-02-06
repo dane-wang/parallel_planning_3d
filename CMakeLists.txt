@@ -135,7 +135,7 @@ include_directories(
 
 ADD_LIBRARY(planner SHARED include/parallel_planning_3d/planner.h src/planner.cpp )
 
-CUDA_ADD_LIBRARY(parallel_planner SHARED include/parallel_planning_3d/parallel_explore.cuh src/parallel_explore.cu )
+CUDA_ADD_LIBRARY(parallel_planner SHARED include/parallel_planning_3d/parallel_explore.cuh src/parallel_explore.cu src/parallel_bi_explore.cu)
 
 add_executable(a_star_3d src/a_star.cpp)
 target_link_libraries(a_star_3d ${catkin_LIBRARIES}  planner)
@@ -144,9 +144,15 @@ target_link_libraries(a_star_3d ${catkin_LIBRARIES}  planner)
 cuda_add_executable(a_star_3d_parallel  src/a_star_parallel.cu)
 target_link_libraries(a_star_3d_parallel ${catkin_LIBRARIES} ${CUDA_LIBRARIES} planner)
 
+cuda_add_executable(bi_a_star_3d_parallel  src/bi_a_star_parallel.cu)
+target_link_libraries(bi_a_star_3d_parallel ${catkin_LIBRARIES} ${CUDA_LIBRARIES} planner)
+
+
 add_executable(planning_3d_timing  src/planning_time.cpp)
 target_link_libraries(planning_3d_timing ${catkin_LIBRARIES} ${CUDA_LIBRARIES} planner parallel_planner)
 
+add_executable(bi_planning_3d_timing  src/bi_planning_time.cpp)
+target_link_libraries(bi_planning_3d_timing ${catkin_LIBRARIES} ${CUDA_LIBRARIES} planner parallel_planner)
 
 
 

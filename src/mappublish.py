@@ -34,9 +34,9 @@ def mapcallback(data=None):
 
     # 0 - free node, 1 - start, 2 - goal, 3 - path, 4 - obstacle, 5 - frontier, 6 - explored
     map = np.array(data.data)
-    r_list= np.array([255,0,255,255,0,120,255])
-    g_list= np.array([255,255,0,255,0,120,165])
-    b_list= np.array([255,0,0,0,0,120,0])
+    r_list= np.array([255,0,255,255,0,120,255, 170])
+    g_list= np.array([255,255,0,255,0,120,165, 50])
+    b_list= np.array([255,0,0,0,0,120,0, 150])
     r = np.take(r_list, map)
     g = np.take(g_list, map)
     b = np.take(b_list, map)
