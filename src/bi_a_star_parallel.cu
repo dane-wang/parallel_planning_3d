@@ -4,7 +4,7 @@
 #include <time.h>  
 #include <vector>
 #include "parallel_planning_3d/planner.h"
-#include "std_msgs/Int8MultiArray.h"
+#include "std_msgs/Int32MultiArray.h"
 #include <algorithm>
 #include <xmlrpcpp/XmlRpcValue.h>
 
@@ -305,10 +305,10 @@ int main(int argc, char** argv)
     ros::NodeHandle nh; 
 
     // 发布消息 话题名字 队列大小
-    ros::Publisher pub = nh.advertise<std_msgs::Int8MultiArray> ("planning_info", 100, ros::init_options::AnonymousName);
+    ros::Publisher pub = nh.advertise<std_msgs::Int32MultiArray> ("planning_info", 100, ros::init_options::AnonymousName);
         
     //geometry_msgs::Point start_goal;
-    std_msgs::Int8MultiArray map;
+    std_msgs::Int32MultiArray map;
     
 
     //generate map info from the config file
@@ -589,7 +589,7 @@ int main(int argc, char** argv)
 
         
 
-        std::vector<int8_t> v(n*n*n, 0);
+        std::vector<int32_t> v(n*n*n, 0);
         for (int z=0; z<n; z++){
                 for (int y =0; y<n; y++){
 

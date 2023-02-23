@@ -7,6 +7,15 @@
 #include <vector>
 #include <math.h>
 
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+#include <stdio.h>
+#include <cuda.h>
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+#include <thrust/extrema.h>
+#include <thrust/merge.h>
+
 
 
 namespace planner
@@ -75,6 +84,9 @@ namespace planner
     int coordtoindex(std::vector<int>& coordinate, int n);
 
     std::vector<int> indextocoord(int index, int n);
+
+    // __device__ int coordtoindex_gpu(thrust::device_vector<int>& coordinate, int n);
+    // __device__ thrust::device_vector<int> indextocoord_gpu(int index, int n);
 
     //Check if there is a hidden obstracle nearby
     void obstacle_detection(int current, planner::Node* graph, int n);

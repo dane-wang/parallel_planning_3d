@@ -4,13 +4,16 @@
 #include <time.h>  
 #include <vector>
 #include <queue>
-#include "std_msgs/Int8MultiArray.h"
+#include "std_msgs/Int32MultiArray.h"
 
 #include "parallel_planning_3d/planner.h"
+#include "parallel_planning_3d/parallel_explore.cuh"
 #include <algorithm>
 #include <xmlrpcpp/XmlRpcValue.h>
 #include <cmath>
 #include <random>
+
+extern "C" void parallel_dijkstra(planner::Node* graph, int n, int goal, int resolution_size);
 
 int main (int argc, char **argv) 
 {
@@ -20,13 +23,13 @@ int main (int argc, char **argv)
 	ros::NodeHandle nh; 
 
     // 发布消息 话题名字 队列大小
-	ros::Publisher pub = nh.advertise<std_msgs::Int8MultiArray> ("planning_info", 100, ros::init_options::AnonymousName);
+	ros::Publisher pub = nh.advertise<std_msgs::Int32MultiArray> ("planning_info", 100, ros::init_options::AnonymousName);
     
     //geometry_msgs::Point start_goal;
-    std_msgs::Int8MultiArray map;
+    std_msgs::Int32MultiArray map;
 	
     //generate map info from the config file
-    int n, use_random_obstacles;
+    int n, use_random_obstacles, use_dijkstra;
     std::vector<int> start_coord, goal_coord;
     std::vector<int> obstacles;
     
@@ -35,6 +38,7 @@ int main (int argc, char **argv)
     ros::param::get("start_position", start_coord);
     ros::param::get("goal_position", goal_coord);
     ros::param::get("use_random_obstacles", use_random_obstacles);
+    ros::param::get("use_dijkstra", use_dijkstra);
 
     if(use_random_obstacles){
 
@@ -83,6 +87,14 @@ int main (int argc, char **argv)
 
 	planner::map_generation(graph, n, start, goal, obstacles);
 
+    if (use_dijkstra){
+
+        int resolution_size;
+        ros::param::get("resolution_size", resolution_size);
+        parallel_dijkstra(graph, n, goal, resolution_size);
+        
+    }
+
 	bool path_found = false;
 	// std::cout << graph[start].f << std::endl;
 
@@ -97,163 +109,191 @@ int main (int argc, char **argv)
 
 	while (ros::ok()) {
 
-        while(ros::ok() && q_list.size()!=0 && !path_found){
+        // while(ros::ok() && q_list.size()!=0 && !path_found){
 
-			auto smallest_node = q_list.top();
-            q_list.pop();
+		// 	auto smallest_node = q_list.top();
+        //     q_list.pop();
 
-			int explored_index = smallest_node[0];
-            int floor_index = explored_index%(n*n);
-            int vertical_index = explored_index/(n*n);
-            int row_index = floor_index / n;
+		// 	int explored_index = smallest_node[0];
+        //     int floor_index = explored_index%(n*n);
+        //     int vertical_index = explored_index/(n*n);
+        //     int row_index = floor_index / n;
 
-            //std::cout << explored_index << std::endl;
+        //     //std::cout << explored_index << std::endl;
 
-            graph[explored_index].explored = true;
-            graph[explored_index].frontier = false;
+        //     graph[explored_index].explored = true;
+        //     graph[explored_index].frontier = false;
 
-			if (explored_index == goal){
-                std::cout << "found" << std::endl;
-                // planner::Node* temp_node = graph[explored_index].parent;
-                // while (!temp_node->start){
+		// 	if (explored_index == goal){
+        //         std::cout << "found" << std::endl;
+        //         // planner::Node* temp_node = graph[explored_index].parent;
+        //         // while (!temp_node->start){
                    
-                //     temp_node->path = true;
-                //     temp_node = temp_node->parent;
-                // }
-                path_found = true;
-            }
+        //         //     temp_node->path = true;
+        //         //     temp_node = temp_node->parent;
+        //         // }
+        //         path_found = true;
+        //     }
 
-            if (!path_found){
-                for (int i=0; i<26; i++)
-                {
-                    int new_index = explored_index + neighbor[i];
+        //     if (!path_found){
+        //         for (int i=0; i<26; i++)
+        //         {
+        //             int new_index = explored_index + neighbor[i];
 
-                    if (new_index<0 || new_index >= n*n*n) continue;
+        //             if (new_index<0 || new_index >= n*n*n) continue;
 
-                    float cost;
+        //             float cost;
 
-                    if (i<6){
-                        cost = 1;
-                    }
-                    else if (i<18)
-                    {
-                        cost = sqrt(2.0);
-                    }
-                    else {
-                        cost = sqrt(3.0);
-                    }
+        //             if (i<6){
+        //                 cost = 1;
+        //             }
+        //             else if (i<18)
+        //             {
+        //                 cost = sqrt(2.0);
+        //             }
+        //             else {
+        //                 cost = sqrt(3.0);
+        //             }
                     
 
-                    //Check if the new index possible (like if it will go out of the map)
-                    bool edge_detect = true;
+        //             //Check if the new index possible (like if it will go out of the map)
+        //             bool edge_detect = true;
 
-                    //int neighbor[26] = {1, -1, n, -n, n*n, -n*n, n+1, n-1, -n+1, -n-1, n*n+1, n*n-1, n*n+n, n*n-n, -n*n+1, -n*n-1, -n*n+n, -n*n-n, n*n + n + 1, n*n + n- 1,  n*n - n + 1, n*n - n -1, -(n*n + n + 1), -(n*n + n- 1), -(n*n - n + 1), -(n*n - n -1) };
+        //             //int neighbor[26] = {1, -1, n, -n, n*n, -n*n, n+1, n-1, -n+1, -n-1, n*n+1, n*n-1, n*n+n, n*n-n, -n*n+1, -n*n-1, -n*n+n, -n*n-n, n*n + n + 1, n*n + n- 1,  n*n - n + 1, n*n - n -1, -(n*n + n + 1), -(n*n + n- 1), -(n*n - n + 1), -(n*n - n -1) };
                     
-                    bool left_edge_out = (floor_index%n ==0) && (i==1|| i==7 || i==9 || i==11 || i==15 || i==19 || i==21 || i==22 || i==24);
+        //             bool left_edge_out = (floor_index%n ==0) && (i==1|| i==7 || i==9 || i==11 || i==15 || i==19 || i==21 || i==22 || i==24);
 
-                    bool right_edge_out = ((floor_index+1)%n ==0) && (i==0 || i==6 || i==8 || i==10 || i==14 || i==18 || i==20 || i==23 || i==25);
+        //             bool right_edge_out = ((floor_index+1)%n ==0) && (i==0 || i==6 || i==8 || i==10 || i==14 || i==18 || i==20 || i==23 || i==25);
 
-                    bool front_edge_out = ((row_index+1)%n ==0) && (i==2 || i==6 || i==7 || i==12 || i==16 || i==18 || i==19 || i==24 || i==25);
+        //             bool front_edge_out = ((row_index+1)%n ==0) && (i==2 || i==6 || i==7 || i==12 || i==16 || i==18 || i==19 || i==24 || i==25);
 
-                    bool back_edge_out = (row_index == 0) && (i==3 || i==8 || i==9 || i==13 || i==17 || i==20 || i==21 || i==22 || i==23);
+        //             bool back_edge_out = (row_index == 0) && (i==3 || i==8 || i==9 || i==13 || i==17 || i==20 || i==21 || i==22 || i==23);
 
-                    bool top_edge_out = ((vertical_index+1)%n ==0) && (i==4 || i==10 || i==11 || i==12 || i==13 || i==20 || i==21 || i==18 || i==19);
+        //             bool top_edge_out = ((vertical_index+1)%n ==0) && (i==4 || i==10 || i==11 || i==12 || i==13 || i==20 || i==21 || i==18 || i==19);
 
-                    bool bot_edge_out = (vertical_index == 0) && (i==5 || i==14 || i==15 || i==16 || i==17 || i==24 || i==25 || i==22 || i==23);
+        //             bool bot_edge_out = (vertical_index == 0) && (i==5 || i==14 || i==15 || i==16 || i==17 || i==24 || i==25 || i==22 || i==23);
 
-                    if (left_edge_out || right_edge_out || front_edge_out || back_edge_out || top_edge_out || bot_edge_out){
-                        edge_detect = false;
-                    }
+        //             if (left_edge_out || right_edge_out || front_edge_out || back_edge_out || top_edge_out || bot_edge_out){
+        //                 edge_detect = false;
+        //             }
 
 
-                    if (graph[new_index].obstacle == false && graph[new_index].frontier == false && graph[new_index].explored == false && edge_detect)
-                    {
-                        graph[new_index].g = graph[explored_index].g + cost;
-                        graph[new_index].h = planner::h_calculation(&graph[new_index], &graph[goal]);
-                        graph[new_index].f = graph[new_index].h + graph[new_index].g;
-                        graph[new_index].parent = explored_index;
-                        graph[new_index].frontier = true;
+        //             if (graph[new_index].obstacle == false && graph[new_index].frontier == false && graph[new_index].explored == false && edge_detect)
+        //             {
+        //                 graph[new_index].g = graph[explored_index].g + cost;
+        //                 if (graph[new_index].h==INFINITY){
+        //                     graph[new_index].h = planner::h_calculation(&graph[new_index], &graph[goal]);
+        //                 } 
+        //                 graph[new_index].f = graph[new_index].h + graph[new_index].g;
+        //                 graph[new_index].parent = explored_index;
+        //                 graph[new_index].frontier = true;
 
-                        q_list.push({(float) new_index, graph[new_index].f});
-                    }
-                    else if (edge_detect && graph[new_index].obstacle == false && (graph[new_index].frontier == true || graph[new_index].explored == true))
-                    {
-                        if (graph[new_index].g > graph[explored_index].g + cost)
-                        {
-                            graph[new_index].g = graph[explored_index].g + cost;
-                            graph[new_index].f = graph[new_index].h + graph[new_index].g;
-                            graph[new_index].parent = explored_index;
-                            q_list.push({(float) new_index, graph[new_index].f});
+        //                 q_list.push({(float) new_index, graph[new_index].f});
+        //             }
+        //             else if (edge_detect && graph[new_index].obstacle == false && (graph[new_index].frontier == true || graph[new_index].explored == true))
+        //             {
+        //                 if (graph[new_index].g > graph[explored_index].g + cost)
+        //                 {
+        //                     graph[new_index].g = graph[explored_index].g + cost;
+        //                     graph[new_index].f = graph[new_index].h + graph[new_index].g;
+        //                     graph[new_index].parent = explored_index;
+        //                     q_list.push({(float) new_index, graph[new_index].f});
 
-                        }
-                    }
+        //                 }
+        //             }
                     
 
-                }
+        //         }
             
-                // std::sort(q_list.begin(), q_list.end(), planner::sortcol);
-            }
-            else{
+        //         // std::sort(q_list.begin(), q_list.end(), planner::sortcol);
+        //     }
+        //     else{
                 
-                int path1 = goal;
-                while (path1 != start)
-                {
-                    graph[path1].path = true;
-                    path1 = graph[path1].parent;
-                }
+        //         int path1 = goal;
+        //         while (path1 != start)
+        //         {
+        //             graph[path1].path = true;
+        //             path1 = graph[path1].parent;
+        //         }
             
                 
-            }
+        //     }
 
-            std::vector<int8_t> v(n*n*n, 0);
-            for (int z=0; z<n; z++){
-                for (int y =0; y<n; y++){
+        //     std::vector<int32_t> v(n*n*n, 0);
+        //     for (int z=0; z<n; z++){
+        //         for (int y =0; y<n; y++){
 
-                    for (int x=0; x<n; x++){
+        //             for (int x=0; x<n; x++){
 
-                        if (graph[z*n*n + y*n+x].start) {
-                            v[z*n*n + y*n+x] = 1;
-                        }
-                        else if (graph[z*n*n + y*n+x].goal)
-                        {
-                            v[z*n*n + y*n+x] = 2;
-                        }
-                        else if (graph[z*n*n + y*n+x].path){
-                            v[z*n*n + y*n+x] = 3;
-                        }
-                        else if (graph[z*n*n + y*n+x].obstacle){
-                            v[z*n*n + y*n+x] = 4;
-                        }
-                        else if (graph[z*n*n + y*n+x].frontier){
-                            v[z*n*n + y*n+x] = 5;
-                        }
-                        else if (graph[z*n*n + y*n+x].explored){
-                            v[z*n*n + y*n+x] = 6;
-                        }
+        //                 if (graph[z*n*n + y*n+x].start) {
+        //                     v[z*n*n + y*n+x] = 1;
+        //                 }
+        //                 else if (graph[z*n*n + y*n+x].goal)
+        //                 {
+        //                     v[z*n*n + y*n+x] = 2;
+        //                 }
+        //                 else if (graph[z*n*n + y*n+x].path){
+        //                     v[z*n*n + y*n+x] = 3;
+        //                 }
+        //                 else if (graph[z*n*n + y*n+x].obstacle){
+        //                     v[z*n*n + y*n+x] = 4;
+        //                 }
+        //                 else if (graph[z*n*n + y*n+x].frontier){
+        //                     v[z*n*n + y*n+x] = 5;
+        //                 }
+        //                 else if (graph[z*n*n + y*n+x].explored){
+        //                     v[z*n*n + y*n+x] = 6;
+        //                 }
+
+        //                 // v[z*n*n + y*n+x] = graph[z*n*n + y*n+x].h;
                         
                         
-                    }
-                }
-            }
+        //             }
+        //         }
+        //     }
             
-            ros::Rate loop_rate(30);
+        //     ros::Rate loop_rate(30);
             
-            map.data = v;
+        //     map.data = v;
         
-            // 广播
-            pub.publish(map);
-            loop_rate.sleep(); 
+        //     // 广播
+        //     pub.publish(map);
+        //     loop_rate.sleep(); 
 
-            if (q_list.size()==0) std::cout<<"NO PATH IS FOUND" <<std::endl;
+        //     if (q_list.size()==0) std::cout<<"NO PATH IS FOUND" <<std::endl;
             
 
 
 
 
-		}
+		// }
+
+        std::vector<int32_t> v(n*n*n, 0);
+        for (int z=0; z<n; z++){
+            for (int y =0; y<n; y++){
+
+                for (int x=0; x<n; x++){
+
+                   
+                    int x1 = (int)graph[z*n*n + y*n+x].h;
+            
+                    v[z*n*n + y*n+x] = x1;
+                    
+                }
+            }
+        }
+
+        std::cout<< "Origion " <<  graph[1].h  <<std::endl;
+        std::cout<< "Origion " <<  v[1]  <<std::endl;
+
+
+        
+
+                        
 
        
         ros::Rate loop_rate(5);
+        map.data = v;
         pub.publish(map);
         loop_rate.sleep(); 
 

@@ -7,6 +7,17 @@
 #include <math.h>
 #include <random>
 
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+#include <stdio.h>
+#include <cuda.h>
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+#include <thrust/extrema.h>
+#include <thrust/merge.h>
+
+
+
 float planner::h_calculation(planner::Node* Node1, planner::Node* Node2){
 
         return sqrt(pow((Node1->x-Node2->x),2) + pow((Node1->y-Node2->y),2) +  pow((Node1->z-Node2->z),2) );
@@ -118,6 +129,29 @@ std::vector<int> planner::indextocoord(int index, int n){
 
 }
 
+// __device__ int planner::coordtoindex_gpu(thrust::device_vector<int>& coordinate, int n){
+
+//     int index = coordinate[0] + coordinate[1]*n + coordinate[2]*n*n;
+//     return index;
+// }
+
+// __device__ thrust::device_vector<int> planner::indextocoord_gpu(int index, int n){
+
+//     thrust::device_vector<int> coordinate(3);
+
+//     coordinate[2] = index/(n*n);
+
+//     int a = index%(n*n);
+
+//     coordinate[0] = a%n;
+//     coordinate[1] = a/n;
+
+//     return coordinate;
+
+
+// }
+
+
 void planner::add_hidden_obstacles(Node* graph, std::vector<int> & hidden_obstacles){
     for (int i =0; i<hidden_obstacles.size(); i++){
         graph[hidden_obstacles[i]].hidden_obstacle = true;
@@ -209,7 +243,7 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
                 if (graph[new_index].obstacle == false && graph[new_index].frontier == false && graph[new_index].explored == false && edge_detect)
                 {
                     graph[new_index].g = graph[explored_index].g + cost;
-                    graph[new_index].h = planner::h_calculation(&graph[new_index], &graph[goal_index]);
+                    if (graph[new_index].h==INFINITY) graph[new_index].h = planner::h_calculation(&graph[new_index], &graph[goal_index]);
                     graph[new_index].f = graph[new_index].h + graph[new_index].g;
                     graph[new_index].parent = explored_index;
                     graph[new_index].frontier = true;

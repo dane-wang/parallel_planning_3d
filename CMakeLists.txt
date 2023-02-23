@@ -135,10 +135,10 @@ include_directories(
 
 ADD_LIBRARY(planner SHARED include/parallel_planning_3d/planner.h src/planner.cpp )
 
-CUDA_ADD_LIBRARY(parallel_planner SHARED include/parallel_planning_3d/parallel_explore.cuh src/parallel_explore.cu src/parallel_bi_explore.cu)
+CUDA_ADD_LIBRARY(parallel_planner SHARED include/parallel_planning_3d/parallel_explore.cuh src/parallel_explore.cu src/parallel_bi_explore.cu src/parallel_dijkstra_explore.cu)
 
 add_executable(a_star_3d src/a_star.cpp)
-target_link_libraries(a_star_3d ${catkin_LIBRARIES}  planner)
+target_link_libraries(a_star_3d ${catkin_LIBRARIES} ${CUDA_LIBRARIES}  planner parallel_planner)
 
 
 cuda_add_executable(a_star_3d_parallel  src/a_star_parallel.cu)

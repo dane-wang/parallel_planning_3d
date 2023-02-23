@@ -1,12 +1,16 @@
-map_size: 50 #[width, height] size of the map
+map_size: 100 #[width, height] size of the map
 start_position: [0, 0, 0]   # The x and y location of the start point
 # goal_position: [298, 289 ,263] #The x and y location of the goal point
-goal_position: [49, 49 ,49]
+goal_position: [99, 94, 88] 
 obstacles: [ ]
 hidden_obstacles: [[15,15,15], [28,28, 28], [17,15, 15], [18,15, 15], [19, 15, 15]]
-use_random_obstacles: 1 #Obstacles will be generated randomly based on the ratio below
+use_random_obstacles: 0 #Obstacles will be generated randomly based on the ratio below
 random_obstacles_ratio: 5 #Ratio of random obstacles over map size
-dynamtic_obstacles: 1 #If obstacles will be generated every few steps
+dynamtic_obstacles: 0 #If obstacles will be generated every few steps
 #  [[15,15], [16,15], [17,15], [18,15], [19, 15], [20, 15], [21, 15], [22,15], [22,14], [22, 13], [22, 12], [22, 11], [22,10], [22,9], [22, 8], [22, 7]]
 max_thread: 55512 #The maximum thread of GPU can be used for the planning. AKA the maximum number of nodes can be explored each time
-use_parallel: 1 #Determine if we are using parallel planning or n1
+use_parallel: 0 #Determine if we are using parallel planning or n1
+
+
+use_dijkstra: 1 #Determine if we want to use parallel dijkstra to initinalize h value
+resolution_size: 1 #The resolution size for the dijkstra

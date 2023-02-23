@@ -4,13 +4,14 @@ from sensor_msgs import point_cloud2
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs.msg import PointField
 from std_msgs.msg import Header
-from std_msgs.msg import Int8MultiArray
+from std_msgs.msg import Int32MultiArray
 import struct
 
 n = joint1 = rospy.get_param("/map_size")
 
 
 def mapcallback(data=None):
+
     fields = [PointField('x', 0, PointField.FLOAT32, 1),
               PointField('y', 4, PointField.FLOAT32, 1),
               PointField('z', 8, PointField.FLOAT32, 1),
@@ -34,9 +35,9 @@ def mapcallback(data=None):
 
     # 0 - free node, 1 - start, 2 - goal, 3 - path, 4 - obstacle, 5 - frontier, 6 - explored
     map = np.array(data.data)
-    r_list= np.array([255,0,255,255,0,120,255, 170])
-    g_list= np.array([255,255,0,255,0,120,165, 50])
-    b_list= np.array([255,0,0,0,0,120,0, 150])
+    r_list= np.array([255,0,255,255,0,120,255])
+    g_list= np.array([255,255,0,255,0,120,165])
+    b_list= np.array([255,0,0,0,0,120,0])
     r = np.take(r_list, map)
     g = np.take(g_list, map)
     b = np.take(b_list, map)
@@ -50,12 +51,7 @@ def mapcallback(data=None):
     pointsColor["rgba"] = C
   
 
-    # for j in range(n*n*n):
-    #     print(x[j])
-  
-    # h = np.array(x1.data)
-
-    # h = np.reshape(h, (n, n, n))
+ 
     msg = PointCloud2()
     msg.height = 1
     msg.width = n**3
@@ -69,15 +65,44 @@ def mapcallback(data=None):
 
    
 
-    
-    # points = np.array([x,y,z,r]).reshape(4,-1).T
-
-    # pc2 = point_cloud2.create_cloud(header, fields, points)
     pub.publish(msg)
+
+
+    # Black and white
+    # fields = [PointField('x', 0, PointField.FLOAT32, 1),
+    #           PointField('y', 4, PointField.FLOAT32, 1),
+    #           PointField('z', 8, PointField.FLOAT32, 1),
+    #           PointField('intensity', 12, PointField.FLOAT32, 1),
+    #           ]
+
+    # header = Header()
+    # header.frame_id = "map"
+    # header.stamp = rospy.Time.now()
+
+    # x, y, z = np.meshgrid(np.linspace(0,n,n), np.linspace(0,n,n), np.linspace(0,n,n))
+
+    
+    # x = x.reshape((-1,1)).astype(np.float32)
+    # y = y.reshape((-1,1)).astype(np.float32)
+    # z = z.reshape((-1,1)).astype(np.float32)
+
+
+    # map = np.array(data.data)
+
+    # # C = C.view("uint32")
+    # map = map.reshape((-1,1)).astype(np.float32)
+
+    
+    
+    # points = np.array([x,y,z,map]).reshape(4,-1).T
+
+    # msg = point_cloud2.create_cloud(header, fields, points)
+    # pub.publish(msg)
+
 
 if __name__ == '__main__':
     rospy.init_node('map_publisher', anonymous=True)
-    rospy.Subscriber("planning_info", Int8MultiArray, mapcallback, queue_size=1000, buff_size=1000)
+    rospy.Subscriber("planning_info", Int32MultiArray, mapcallback, queue_size=1000, buff_size=1000)
     
     pub = rospy.Publisher('map', PointCloud2, queue_size=100)
     rate = rospy.Rate(30)

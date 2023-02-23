@@ -4,7 +4,7 @@
 #include <vector>
 #include "parallel_planning_3d/planner.h"
 #include "parallel_planning_3d/parallel_explore.cuh"
-#include "std_msgs/Int8MultiArray.h"
+#include "std_msgs/Int32MultiArray.h"
 #include <algorithm>
 #include <xmlrpcpp/XmlRpcValue.h>
 

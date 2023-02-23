@@ -5,7 +5,7 @@
 #include <vector>
 #include <queue>
 #include "parallel_planning_3d/planner.h"
-#include "std_msgs/Int8MultiArray.h"
+#include "std_msgs/Int32MultiArray.h"
 #include <algorithm>
 #include <xmlrpcpp/XmlRpcValue.h>
 #include <stdio.h>
@@ -20,6 +20,8 @@ extern "C" void parallel_explore(planner::Node* graph, int n, int start_index, i
 // extern "C" void parallel_dijkstra(planner::Node* graph, int n,  int goal_index, int max_thread);
 extern "C" void gpu_warmup();
 
+extern "C" void parallel_dijkstra(planner::Node* graph, int n, int goal, int resolution_size);
+
 
 int main(int argc, char** argv){
     ros::init(argc, argv, "parallel_planning_timing");
@@ -27,13 +29,13 @@ int main(int argc, char** argv){
     ros::NodeHandle nh; 
 
     // 发布消息 话题名字 队列大小
-	ros::Publisher pub = nh.advertise<std_msgs::Int8MultiArray> ("planning_info", 100, ros::init_options::AnonymousName);
+	ros::Publisher pub = nh.advertise<std_msgs::Int32MultiArray> ("planning_info", 100, ros::init_options::AnonymousName);
     ros::Rate loop_rate(5);
 
-    std_msgs::Int8MultiArray map;
+    std_msgs::Int32MultiArray map;
     
     //generate map info from the config file
-    int n, max_thread_size, use_parallel_planning, use_random_obstacles, dynamtic_obstacles;
+    int n, max_thread_size, use_parallel_planning, use_random_obstacles, dynamtic_obstacles, use_dijkstra;
     std::vector<int> start_coord, goal_coord;
     std::vector<int> obstacles;
     std::vector<int> hidden_obstacles;
@@ -49,6 +51,7 @@ int main(int argc, char** argv){
     ros::param::get("use_parallel", use_parallel_planning);
     ros::param::get("use_random_obstacles", use_random_obstacles);
     ros::param::get("dynamtic_obstacles", dynamtic_obstacles);
+    ros::param::get("use_dijkstra", use_dijkstra);
 
     if(use_random_obstacles){
 
@@ -111,10 +114,15 @@ int main(int argc, char** argv){
 
     planner::Node* graph = new planner::Node[n*n*n];
 
-  
-    
-
 	planner::map_generation(graph, n, start, goal, obstacles);
+
+    if (use_dijkstra){
+
+        int resolution_size;
+        ros::param::get("resolution_size", resolution_size);
+        parallel_dijkstra(graph, n, goal, resolution_size);
+        
+    }
 
     // planner::Node graph_copy[n*n*n];
    
@@ -176,7 +184,7 @@ int main(int argc, char** argv){
 
             
 
-            std::vector<int8_t> v(n*n*n, 0);
+            std::vector<int32_t> v(n*n*n, 0);
 
             if (path_found){
                 current = path.back();
