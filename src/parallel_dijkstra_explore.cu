@@ -55,25 +55,25 @@ __global__ void dijkstra_explore(T* q,  planner::Node* graph, T* new_q , int q_s
 
     
 
-    // for (int i=-(resolution_size-1)/2; i<(resolution_size-1)/2; i++){
-    //   for(int j=-(resolution_size-1)/2; j<(resolution_size-1)/2; j++ ){
-    //       for(int k=-(resolution_size-1)/2; k<(resolution_size-1)/2; k++ ){
+    for (int i=-(resolution_size-1)/2; i<(resolution_size-1)/2+1; i++){
+      for(int j=-(resolution_size-1)/2; j<(resolution_size-1)/2+1; j++ ){
+          for(int k=-(resolution_size-1)/2; k<(resolution_size-1)/2+1; k++ ){
 
-    //           if ((explored_coord[0]+i < n) && (explored_coord[0]+i >= 0)  && (explored_coord[1]+j < n) && (explored_coord[1]+j >= 0) && (explored_coord[2]+k < n) && (explored_coord[2]+k >= 0)){
+              if ((explored_coord[0]+i < n) && (explored_coord[0]+i >= 0)  && (explored_coord[1]+j < n) && (explored_coord[1]+j >= 0) && (explored_coord[2]+k < n) && (explored_coord[2]+k >= 0)){
 
-    //                       printf("Hello");
-    //                       int sur_coord[3];
-    //                       sur_coord[0] = explored_coord[0]+i; 
-    //                       sur_coord[1] = explored_coord[1]+j; 
-    //                       sur_coord[2] = explored_coord[2]+k; 
-    //                       int sur_index = sur_coord[0] + sur_coord[1]*n + sur_coord[2]*n*n;
+                          // printf("Hello");
+                          int sur_coord[3] = {0, 0, 0};
+                          sur_coord[0] = explored_coord[0]+i; 
+                          sur_coord[1] = explored_coord[1]+j; 
+                          sur_coord[2] = explored_coord[2]+k; 
+                          int sur_index = sur_coord[0] + sur_coord[1]*n + sur_coord[2]*n*n;
 
-    //                       graph[sur_index].h = graph[explored_index].h;
+                          graph[sur_index].h = graph[explored_index].h;
 
-    //           }
-    //       }
-    //     }
-    //   }
+              }
+          }
+        }
+      }
 
 
 
@@ -93,9 +93,9 @@ __global__ void dijkstra_explore(T* q,  planner::Node* graph, T* new_q , int q_s
 
 
       int new_coord[3];
-      new_coord[0] = explored_coord[0] + neighbor[0] ;
-      new_coord[1] = explored_coord[1] + neighbor[1] ;
-      new_coord[2] = explored_coord[2] + neighbor[2] ;
+      new_coord[0] = explored_coord[0] + neighbor[0] * resolution_size ;
+      new_coord[1] = explored_coord[1] + neighbor[1] * resolution_size;
+      new_coord[2] = explored_coord[2] + neighbor[2] * resolution_size;
 
       // printf("Checking %d, %d, %d\n", (int) new_coord[0], (int) new_coord[1], (int) new_coord[2]);
 
@@ -119,30 +119,30 @@ __global__ void dijkstra_explore(T* q,  planner::Node* graph, T* new_q , int q_s
 
         //we know it is not a valid point
 
-        // for (int i=-(resolution_size-1)/2; i<(resolution_size-1)/2; i++)
-        // {
-        //   for(int j=-(resolution_size-1)/2; j<(resolution_size-1)/2; j++ )
-        //   {
-        //     for(int k=-(resolution_size-1)/2; k<(resolution_size-1)/2; k++ )
-        //     {
+        for (int i=-(resolution_size-1)/2; i<(resolution_size-1)/2+1; i++)
+        {
+          for(int j=-(resolution_size-1)/2; j<(resolution_size-1)/2+1; j++ )
+          {
+            for(int k=-(resolution_size-1)/2; k<(resolution_size-1)/2+1; k++ )
+            {
 
-        //       if ((new_coord[0]+i < n) && (new_coord[0]+i >= 0)  && (new_coord[1]+j < n) && (new_coord[1]+j >= 0) && (new_coord[2]+k < n) && (new_coord[2]+k >= 0)){
+              if ((new_coord[0]+i < n) && (new_coord[0]+i >= 0)  && (new_coord[1]+j < n) && (new_coord[1]+j >= 0) && (new_coord[2]+k < n) && (new_coord[2]+k >= 0)){
 
-        //                   // thrust::device_vector<int> new_coord1(3);
+                          // thrust::device_vector<int> new_coord1(3);
 
-        //                   printf("Hello");
-        //                   int new_coord1[3];
-        //                   new_coord1[0] = new_coord[0]+i; 
-        //                   new_coord1[1] = new_coord[1]+j; 
-        //                   new_coord1[2] = new_coord[2]+k; 
-        //                   int new_index1 = new_coord1[0] + new_coord1[1]*n + new_coord1[2]*n*n;
+                          // printf("Hello");
+                          int new_coord1[3] = {0, 0, 0};
+                          new_coord1[0] = new_coord[0]+i; 
+                          new_coord1[1] = new_coord[1]+j; 
+                          new_coord1[2] = new_coord[2]+k; 
+                          int new_index1 = new_coord1[0] + new_coord1[1]*n + new_coord1[2]*n*n;
 
-        //                   graph[new_index1].h = graph[explored_index].h + cost;
+                          graph[new_index1].h = graph[explored_index].h + cost;
 
-        //               }
-        //     }
-        //   }
-        // }
+                      }
+            }
+          }
+        }
         // printf("Wrong");
         continue;
         
@@ -237,6 +237,7 @@ void parallel_dijkstra(planner::Node* graph, int n, int goal, int resolution_siz
 
 
     int q_size = q_lists_gpu.size();
+    std::cout << "Q size " << q_lists_gpu.size() << std::endl;
 
 
 
@@ -283,7 +284,7 @@ void parallel_dijkstra(planner::Node* graph, int n, int goal, int resolution_siz
     q_lists_gpu = new_q_lists_gpu;
     new_q_lists_gpu.clear();
 
-    // std::cout << "Q size " << q_lists_gpu.size() << std::endl;
+    
 
     
   
