@@ -1,7 +1,7 @@
 map_size: 30 #[width, height] size of the map
 start_position: [0, 0, 0]   # The x and y location of the start point
 # goal_position: [298, 289 ,263] #The x and y location of the goal point
-goal_position: [29, 29, 29] 
+goal_position: [28, 27, 25] 
 obstacles: [ ]
 hidden_obstacles: [[15,15,15], [28,28, 28], [17,15, 15], [18,15, 15], [19, 15, 15]]
 use_random_obstacles: 0 #Obstacles will be generated randomly based on the ratio below
@@ -12,5 +12,5 @@ max_thread: 55512 #The maximum thread of GPU can be used for the planning. AKA t
 use_parallel: 0 #Determine if we are using parallel planning or n1
 
 
-use_dijkstra: 1 #Determine if we want to use parallel dijkstra to initinalize h value
+use_dijkstra: 0 #Determine if we want to use parallel dijkstra to initinalize h value
 resolution_size: 1 #The resolution size for the dijkstra

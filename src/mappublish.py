@@ -12,67 +12,10 @@ n = joint1 = rospy.get_param("/map_size")
 
 def mapcallback(data=None):
 
-    # fields = [PointField('x', 0, PointField.FLOAT32, 1),
-    #           PointField('y', 4, PointField.FLOAT32, 1),
-    #           PointField('z', 8, PointField.FLOAT32, 1),
-    #           PointField('rgb', 12, PointField.FLOAT32, 1),
-    #           ]
-
-    # header = Header()
-    # header.frame_id = "map"
-    # header.stamp = rospy.Time.now()
-
-    # x, y, z = np.meshgrid(np.linspace(0,n,n), np.linspace(0,n,n), np.linspace(0,n,n))
-
-    # pointsColor = np.zeros( (n**3, 1), \
-    #     dtype={ 
-    #         "names": ( "x", "y", "z", "rgba" ), 
-    #         "formats": ( "f4", "f4", "f4", "u4" )} )
-
-    # pointsColor["x"] = x.reshape((-1,1)).astype(np.float32)
-    # pointsColor["y"] = y.reshape((-1,1)).astype(np.float32)
-    # pointsColor["z"] = z.reshape((-1,1)).astype(np.float32)
-
-    # # 0 - free node, 1 - start, 2 - goal, 3 - path, 4 - obstacle, 5 - frontier, 6 - explored
-    # map = np.array(data.data)
-    # r_list= np.array([255,0,255,255,0,120,255])
-    # g_list= np.array([255,255,0,255,0,120,165])
-    # b_list= np.array([255,0,0,0,0,120,0])
-    # r = np.take(r_list, map)
-    # g = np.take(g_list, map)
-    # b = np.take(b_list, map)
-
-    # C = np.zeros((n**3, 4), dtype=np.uint8) + 255
-    # C[:,2] = r.astype(np.uint8)
-    # C[:,1] = g.astype(np.uint8)
-    # C[:,0] = b.astype(np.uint8)
-    
-    # C = C.view("uint32")
-    # pointsColor["rgba"] = C
-  
-
- 
-    # msg = PointCloud2()
-    # msg.height = 1
-    # msg.width = n**3
-    # msg.header = header
-    # msg.fields = fields
-    # msg.is_bigendian = False
-    # msg.point_step   = 16
-    # msg.row_step     = msg.point_step * n**3
-    # msg.is_dense     = False
-    # msg.data         = pointsColor.tostring()
-
-   
-
-    # pub.publish(msg)
-
-
-    # Black and white
     fields = [PointField('x', 0, PointField.FLOAT32, 1),
               PointField('y', 4, PointField.FLOAT32, 1),
               PointField('z', 8, PointField.FLOAT32, 1),
-              PointField('intensity', 12, PointField.FLOAT32, 1),
+              PointField('rgb', 12, PointField.FLOAT32, 1),
               ]
 
     header = Header()
@@ -81,23 +24,80 @@ def mapcallback(data=None):
 
     x, y, z = np.meshgrid(np.linspace(0,n,n), np.linspace(0,n,n), np.linspace(0,n,n))
 
-    
-    x = x.reshape((-1,1)).astype(np.float32)
-    y = y.reshape((-1,1)).astype(np.float32)
-    z = z.reshape((-1,1)).astype(np.float32)
+    pointsColor = np.zeros( (n**3, 1), \
+        dtype={ 
+            "names": ( "x", "y", "z", "rgba" ), 
+            "formats": ( "f4", "f4", "f4", "u4" )} )
 
+    pointsColor["x"] = x.reshape((-1,1)).astype(np.float32)
+    pointsColor["y"] = y.reshape((-1,1)).astype(np.float32)
+    pointsColor["z"] = z.reshape((-1,1)).astype(np.float32)
 
+    # 0 - free node, 1 - start, 2 - goal, 3 - path, 4 - obstacle, 5 - frontier, 6 - explored
     map = np.array(data.data)
+    r_list= np.array([255,0,255,255,0,120,255, 120])
+    g_list= np.array([255,255,0,255,0,120,165, 50])
+    b_list= np.array([255,0,0,0,0,120,0, 170])
+    r = np.take(r_list, map)
+    g = np.take(g_list, map)
+    b = np.take(b_list, map)
 
-    # C = C.view("uint32")
-    map = map.reshape((-1,1)).astype(np.float32)
-
+    C = np.zeros((n**3, 4), dtype=np.uint8) + 255
+    C[:,2] = r.astype(np.uint8)
+    C[:,1] = g.astype(np.uint8)
+    C[:,0] = b.astype(np.uint8)
     
-    
-    points = np.array([x,y,z,map]).reshape(4,-1).T
+    C = C.view("uint32")
+    pointsColor["rgba"] = C
+  
 
-    msg = point_cloud2.create_cloud(header, fields, points)
+ 
+    msg = PointCloud2()
+    msg.height = 1
+    msg.width = n**3
+    msg.header = header
+    msg.fields = fields
+    msg.is_bigendian = False
+    msg.point_step   = 16
+    msg.row_step     = msg.point_step * n**3
+    msg.is_dense     = False
+    msg.data         = pointsColor.tostring()
+
+   
+
     pub.publish(msg)
+
+
+    # Black and white
+    # fields = [PointField('x', 0, PointField.FLOAT32, 1),
+    #           PointField('y', 4, PointField.FLOAT32, 1),
+    #           PointField('z', 8, PointField.FLOAT32, 1),
+    #           PointField('intensity', 12, PointField.FLOAT32, 1),
+    #           ]
+
+    # header = Header()
+    # header.frame_id = "map"
+    # header.stamp = rospy.Time.now()
+
+    # x, y, z = np.meshgrid(np.linspace(0,n,n), np.linspace(0,n,n), np.linspace(0,n,n))
+
+    
+    # x = x.reshape((-1,1)).astype(np.float32)
+    # y = y.reshape((-1,1)).astype(np.float32)
+    # z = z.reshape((-1,1)).astype(np.float32)
+
+
+    # map = np.array(data.data)
+
+    # # C = C.view("uint32")
+    # map = map.reshape((-1,1)).astype(np.float32)
+
+    
+    
+    # points = np.array([x,y,z,map]).reshape(4,-1).T
+
+    # msg = point_cloud2.create_cloud(header, fields, points)
+    # pub.publish(msg)
 
 
 if __name__ == '__main__':

@@ -102,17 +102,17 @@ __global__ void dijkstra_explore(T* q,  planner::Node* graph, T* new_q , int q_s
       int new_index = new_coord[0] + new_coord[1]*n + new_coord[2]*n*n;
       
 
-      float cost = 5.0;
+      float cost = 5;
           
       // if (i<6){
-      //   cost = 1;
+      //   cost = 1*5;
       // }
       // else if (i<18)
       // {
-      //   cost = sqrt(2.0);
+      //   cost = sqrt(2.0)*5;
       // }
       // else {
-      //   cost = sqrt(3.0);
+      //   cost = sqrt(3.0)*5;
       // }
 
       if ((new_coord[0] >= n) || (new_coord[0] < 0)  || (new_coord[1] >= n) || (new_coord[1] <0 ) || (new_coord[2] >= n) || (new_coord[2] < 0)){
@@ -148,7 +148,7 @@ __global__ void dijkstra_explore(T* q,  planner::Node* graph, T* new_q , int q_s
         
 
       }
-      else if (graph[new_index].obstacle == false && graph[new_index].h == INFINITY)
+      else if ( graph[new_index].h == INFINITY)
       {
         graph[new_index].h = graph[explored_index].h + cost;
         // graph[new_index].frontier = true;
@@ -160,7 +160,7 @@ __global__ void dijkstra_explore(T* q,  planner::Node* graph, T* new_q , int q_s
         
         new_q[26*tid+i] = new_index;
       }
-      else if (graph[new_index].obstacle == false && (graph[new_index].h != INFINITY))
+      else if ( (graph[new_index].h != INFINITY))
       {
         if (graph[new_index].h > graph[explored_index].h + cost)
         {
@@ -237,7 +237,7 @@ void parallel_dijkstra(planner::Node* graph, int n, int goal, int resolution_siz
 
 
     int q_size = q_lists_gpu.size();
-    std::cout << "Q size " << q_lists_gpu.size() << std::endl;
+    // std::cout << "Q size " << q_lists_gpu.size() << std::endl;
 
 
 

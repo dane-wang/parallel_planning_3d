@@ -21,7 +21,7 @@
 #include <queue>
 
 __device__ bool path_found_gpu;
-__device__ int neighbor_gpu[26];
+__device__ int neighbor_gpu[3*26];
 __device__ int goal_gpu;
 
 struct is_negative
@@ -51,17 +51,20 @@ __global__ void get_f(T* q,  planner::Node* graph, T1* h, int q_size )
 }
 
 template <typename T>
-__global__ void explore(T* q,  planner::Node* graph, T* new_q, int q_size  )
+__global__ void explore(T* q,  planner::Node* graph, T* new_q, int q_size, int n  )
 {
   int tid = blockIdx.x *blockDim.x + threadIdx.x;
   if (tid<q_size) {
 
     int explored_index = q[tid];
-    int n = neighbor_gpu[2];
+    
+    int explored_coord[3];
+    explored_coord[2] = explored_index/(n*n);
 
-    int floor_index = explored_index%(n*n);
-    int vertical_index = explored_index/(n*n);
-    int row_index = floor_index / n;
+    int a = explored_index%(n*n);
+
+    explored_coord[0] = a%n;
+    explored_coord[1] = a/n;
 
     graph[explored_index].explored = true;
     graph[explored_index].frontier = false;
@@ -82,8 +85,21 @@ __global__ void explore(T* q,  planner::Node* graph, T* new_q, int q_size  )
       for (int i=0; i<26; i++)
       {   
         
+        int neighbor[3];
+        neighbor[0] = neighbor_gpu[3*i];
+        neighbor[1] = neighbor_gpu[3*i+1];
+        neighbor[2] = neighbor_gpu[3*i+2];  
+
+        int new_coord[3];
+        new_coord[0] = explored_coord[0] + neighbor[0];
+        new_coord[1] = explored_coord[1] + neighbor[1];
+        new_coord[2] = explored_coord[2] + neighbor[2];
+
+        // printf("Checking %d, %d, %d\n", (int) new_coord[0], (int) new_coord[1], (int) new_coord[2]);
+
+        int new_index = new_coord[0] + new_coord[1]*n + new_coord[2]*n*n;
         
-        int new_index = explored_index + neighbor_gpu[i];
+        
         if (new_index<0 || new_index >= n*n*n) continue;
 
         float cost;
@@ -102,25 +118,9 @@ __global__ void explore(T* q,  planner::Node* graph, T* new_q, int q_size  )
         bool edge_detect = true;
 
         
-                  
-        bool left_edge_out = (floor_index%n ==0) && (i==1|| i==7 || i==9 || i==11 || i==15 || i==19 || i==21 || i==22 || i==24);
-
-        bool right_edge_out = ((floor_index+1)%n ==0) && (i==0 || i==6 || i==8 || i==10 || i==14 || i==18 || i==20 || i==23 || i==25);
-
-        bool front_edge_out = ((row_index+1)%n ==0) && (i==2 || i==6 || i==7 || i==12 || i==16 || i==18 || i==19 || i==24 || i==25);
-
-        bool back_edge_out = (row_index == 0) && (i==3 || i==8 || i==9 || i==13 || i==17 || i==20 || i==21 || i==22 || i==23);
-
-        bool top_edge_out = ((vertical_index+1)%n ==0) && (i==4 || i==10 || i==11 || i==12 || i==13 || i==20 || i==21 || i==18 || i==19);
-
-        bool bot_edge_out = (vertical_index == 0) && (i==5 || i==14 || i==15 || i==16 || i==17 || i==24 || i==25 || i==22 || i==23);
-
-        if (left_edge_out || right_edge_out || front_edge_out || back_edge_out || top_edge_out || bot_edge_out){
+        if ((new_coord[0] >= n) || (new_coord[0] < 0)  || (new_coord[1] >= n) || (new_coord[1] <0 ) || (new_coord[2] >= n) || (new_coord[2] < 0)){
             edge_detect = false;
         }
-
-        
-
 
         if (graph[new_index].obstacle == false && graph[new_index].frontier == false && graph[new_index].explored == false && edge_detect)
         {
@@ -176,14 +176,23 @@ void parallel_explore(planner::Node* graph, int n, int start_index, int goal_ind
 
   planner::Node *map_gpu;
 
-  int neighbor[26] = {1, -1, n, -n, n*n, -n*n, n+1, n-1, -n+1, -n-1, n*n+1, n*n-1, n*n+n, n*n-n, -n*n+1, -n*n-1, -n*n+n, -n*n-n, n*n + n + 1, n*n + n- 1,  n*n - n + 1, n*n - n -1, -(n*n + n + 1), -(n*n + n- 1), -(n*n - n + 1), -(n*n - n -1) };
+  int neighbors[][3] = {{0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 1, 1}, {0, 1, -1}, {0, -1, 1}, {0, -1, -1}, {1, 0, 1}, {1, 0, -1}, {1, 1, 0}, {1, -1, 0}, {-1, 0, 1} , {-1, 0, -1} , {-1, 1, 0} , {-1, -1, 0} , {1, 1, 1} , {1, 1, -1} , {1, -1, 1} , {1, -1, -1} , {-1, -1, -1} , {-1, -1, 1} , {-1, 1, -1} , {-1, 1, 1}   };
 
+  int neighbor[26*3];
+  for (int i =0; i< 26; i++){
+    for (int j=0; j<3; j++){
+
+      neighbor[3*i+j] = neighbors[i][j];
+
+    }
+
+  }
   //Copy all needed variables to gpu
   cudaMalloc( (void**)&map_gpu, map_size );
   cudaMemcpy(map_gpu, graph, map_size, cudaMemcpyHostToDevice);
 
   cudaMemcpyToSymbol(path_found_gpu, &path_found,  sizeof(bool));
-  cudaMemcpyToSymbol(neighbor_gpu, &neighbor,  26*sizeof(int));
+  cudaMemcpyToSymbol(neighbor_gpu, &neighbor,  3*26*sizeof(int));
   cudaMemcpyToSymbol(goal_gpu, &goal,  sizeof(int));
 
   //q list on gpu
@@ -216,7 +225,7 @@ void parallel_explore(planner::Node* graph, int n, int start_index, int goal_ind
 
 
     //Launch the kernel to explore the map
-    explore<<<block_size,thread_size>>>(thrust::raw_pointer_cast(q_lists_gpu.data()),  map_gpu, thrust::raw_pointer_cast(new_q_lists_gpu.data()), thread_size_needed);
+    explore<<<block_size,thread_size>>>(thrust::raw_pointer_cast(q_lists_gpu.data()),  map_gpu, thrust::raw_pointer_cast(new_q_lists_gpu.data()), thread_size_needed, n);
     cudaDeviceSynchronize();
     cudaMemcpyFromSymbol(&path_found, path_found_gpu,  sizeof(bool), 0, cudaMemcpyDeviceToHost );
     // cudaMemcpy(&graph, map_gpu,  map_size, cudaMemcpyDeviceToHost );

@@ -118,9 +118,17 @@ int main(int argc, char** argv){
 
     if (use_dijkstra){
 
+        gpu_warmup();
+
         int resolution_size;
         ros::param::get("resolution_size", resolution_size);
+
+        auto start1 = std::chrono::high_resolution_clock::now();
         parallel_dijkstra(graph, n, goal, resolution_size);
+        auto stop1 = std::chrono::high_resolution_clock::now();
+        float duration1 = std::chrono::duration<float, std::milli>(stop1 - start1).count();
+        // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start_time);
+        std::cout << "Dijkstra Exectuation time is " << duration1 << std::endl;
         
     }
 
@@ -139,7 +147,7 @@ int main(int argc, char** argv){
     while (ros::ok()){
         while (ros::ok() && current!=goal && !no_path)
         {
-           
+            
             if (!path_found && !waiting_for_new_obstacles){
                 
                 planner::Node* graph_copy = new planner::Node[n*n*n];
