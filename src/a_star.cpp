@@ -127,6 +127,8 @@ int main (int argc, char **argv)
             q_list.pop();
 
 			int explored_index = smallest_node[0];
+            if (graph[explored_index].explored) continue;
+
 
             int explored_coord[3];
             explored_coord[2] = explored_index/(n*n);
@@ -219,7 +221,11 @@ int main (int argc, char **argv)
                             graph[new_index].g = graph[explored_index].g + cost;
                             graph[new_index].f = graph[new_index].h + graph[new_index].g;
                             graph[new_index].parent = explored_index;
-                            q_list.push({(float) new_index, graph[new_index].f});
+                            
+                            if (graph[new_index].explored == true) {
+                                graph[new_index].explored == false;
+                                q_list.push({(float) new_index, graph[new_index].f});
+                            }
 
                         }
                     }

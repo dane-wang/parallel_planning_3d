@@ -144,6 +144,11 @@ __global__ void explore(T* q,  planner::Node* graph, T* new_q, int q_size, int n
             graph[new_index].g = graph[explored_index].g + cost;
             graph[new_index].f = graph[new_index].h + graph[new_index].g;
             graph[new_index].parent = explored_index;
+
+            if (graph[new_index].explored == true) {
+              graph[new_index].explored == false;
+              new_q[26*tid+i] = new_index;
+            }
           }
         }
       }
@@ -255,7 +260,18 @@ void parallel_explore(planner::Node* graph, int n, int start_index, int goal_ind
 
       // //sort the q_list based on the f value
       thrust::device_vector<float> f_value(q_lists_gpu.size());
-      get_f<<<1, q_lists_gpu.size()>>>(thrust::raw_pointer_cast(q_lists_gpu.data()),  map_gpu, thrust::raw_pointer_cast(f_value.data()), q_lists_gpu.size() );
+      
+      int f_block_size, f_thread_size;
+      if (q_lists_gpu.size() <=1024){
+          f_block_size = 1;
+          f_thread_size = q_lists_gpu.size();
+        }
+      else{
+          f_block_size = (q_lists_gpu.size()/1024) + 1;
+          f_thread_size = 1024;
+        }
+
+      get_f<<<f_block_size, f_thread_size>>>(thrust::raw_pointer_cast(q_lists_gpu.data()),  map_gpu, thrust::raw_pointer_cast(f_value.data()), q_lists_gpu.size() );
       cudaDeviceSynchronize();
       thrust::sort_by_key(f_value.begin(), f_value.end(), q_lists_gpu.begin() );
       

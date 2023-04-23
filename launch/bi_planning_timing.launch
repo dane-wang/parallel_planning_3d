@@ -1,6 +1,6 @@
 <launch>
  <!-- Load parameters from yaml file -->
- <rosparam file="$(find parallel_planning_3d)/configs/map.yaml" command="load"/>
+ <rosparam file="$(find parallel_planning_3d)/configs/bi_map.yaml" command="load"/>
  <!-- Start the planning node -->
  <node name="bi_planning_3d_timing" pkg="parallel_planning_3d" type="bi_planning_3d_timing" output="screen" required="true">
  </node>
@@ -11,7 +11,7 @@
 
 <!-- Start RVIZ for visualization -->
 <!-- 在rviz中显示-->
-<node name="rviz" pkg="rviz" type="rviz" args="-d $(find parallel_planning_3d)/configs/3d_planning_visualization.rviz" required="true" />
+<!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find parallel_planning_3d)/configs/3d_planning_visualization.rviz" required="true" /> -->
 
 
 </launch>

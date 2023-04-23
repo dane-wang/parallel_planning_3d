@@ -21,6 +21,14 @@
 float planner::h_calculation(planner::Node* Node1, planner::Node* Node2){
 
         return sqrt(pow((Node1->x-Node2->x),2) + pow((Node1->y-Node2->y),2) +  pow((Node1->z-Node2->z),2) );
+        // int a = std::abs(Node1->x-Node2->x);
+        // int b = std::abs(Node1->y-Node2->y);
+        // int c = std::abs(Node1->z-Node2->z);
+        // std::vector<float> coordinate_difference =  {(float) a, (float) b, (float) c};
+
+        // float d = *max_element(coordinate_difference.begin(),coordinate_difference.end());
+
+        // return 10.0*d;
     }
 
 float planner::h_calculation(planner::BiNode* Node1, planner::BiNode* Node2){
@@ -165,8 +173,11 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
     bool path_found = false;
     std::priority_queue< std::vector<float>, std::vector< std::vector<float> >, planner::priority_queue_compare > q_list;
     graph[start_index].g = 0;
-    graph[start_index].h = planner::h_calculation(&graph[start_index], &graph[goal_index]);
+    graph[start_index].h = (float) planner::h_calculation(&graph[start_index], &graph[goal_index]);
     graph[start_index].f = graph[start_index].g + graph[start_index].h;
+
+    std::cout << graph[start_index].h << std::endl;
+
     q_list.push({(float) start_index, graph[start_index].f});
     int neighbors[][3] = {{0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}, {0, 1, 1}, {0, 1, -1}, {0, -1, 1}, {0, -1, -1}, {1, 0, 1}, {1, 0, -1}, {1, 1, 0}, {1, -1, 0}, {-1, 0, 1} , {-1, 0, -1} , {-1, 1, 0} , {-1, -1, 0} , {1, 1, 1} , {1, 1, -1} , {1, -1, 1} , {1, -1, -1} , {-1, -1, -1} , {-1, -1, 1} , {-1, 1, -1} , {-1, 1, 1}   };
 
@@ -189,6 +200,9 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
         q_list.pop();
 
         int explored_index = smallest_node[0];
+
+        if (graph[explored_index].explored) continue;
+
 
         int explored_coord[3];
         explored_coord[2] = explored_index/(n*n);
@@ -267,7 +281,7 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
                 {
                     graph[new_index].g = graph[explored_index].g + cost;
                     if (graph[new_index].h==INFINITY) {
-                        graph[new_index].h = planner::h_calculation(&graph[new_index], &graph[goal_index]);
+                        graph[new_index].h = (float) planner::h_calculation(&graph[new_index], &graph[goal_index]);
                         // std::cout << "calculating " << new_index << std::endl;
 
                     } 
@@ -284,8 +298,11 @@ void planner::sequential_explore(planner::Node* graph, int n, int start_index, i
                         graph[new_index].g = graph[explored_index].g + cost;
                         graph[new_index].f = graph[new_index].h + graph[new_index].g;
                         graph[new_index].parent = explored_index;
-                        q_list.push({(float) new_index, graph[new_index].f});
 
+                        if (graph[new_index].explored == true) {
+                            graph[new_index].explored == false;
+                            q_list.push({(float) new_index, graph[new_index].f});
+                        }
                     }
                 }
                 
@@ -544,3 +561,53 @@ void planner::clear_obstacle_block(planner::BiNode* graph, int n, int current, i
 
 }
 
+
+
+std::vector<int> planner::goal_generation( int start, int goal, int n){
+
+    float cost = 0;
+
+    
+
+    std::random_device rnd_device;
+    // Specify the engine and distribution.
+    std::mt19937 mersenne_engine {rnd_device()};  // Generates random integers
+    std::uniform_int_distribution<int> dist {0, n*n*n-1};
+    
+    auto gen = [&dist, &mersenne_engine](){
+                return dist(mersenne_engine);
+            };
+
+    
+    while (cost<1.2*n)
+    {
+        std::vector<int> start_and_goal(2);
+        std::generate(std::begin(start_and_goal), std::end(start_and_goal), gen);
+        start = start_and_goal[0];
+        goal = start_and_goal[1];
+
+        std::vector<int> start_coordinate = planner::indextocoord(start, n);
+        std::vector<int> goal_coordinate = planner::indextocoord(goal, n);
+
+
+        cost = sqrt(pow((start_coordinate[0]-goal_coordinate[0]),2) + pow((start_coordinate[1]- goal_coordinate[1]),2) + pow((start_coordinate[2]-goal_coordinate[2]),2));
+        start_and_goal.clear();
+        
+        
+    }
+
+        std::vector<int> start_coordinate = planner::indextocoord(start, n);
+        std::vector<int> goal_coordinate = planner::indextocoord(goal, n);
+
+        std::cout << "Start "<< start_coordinate[0] << " " << start_coordinate[1]<< " " << start_coordinate[2]  << std::endl;
+        std::cout << "Goal "<< goal_coordinate[0] << " " << goal_coordinate[1] << " " << goal_coordinate[1] << std::endl;
+        // std::cout << start << " " << goal << " " << cost << std::endl;
+
+        
+
+        std::vector<int> position = {start, goal};
+        return position;
+
+
+
+}

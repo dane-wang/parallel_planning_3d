@@ -155,8 +155,16 @@ __global__ void explore(T* q,  planner::Node* graph, T* new_q, int q_size , int 
             graph[new_index].g = graph[explored_index].g + cost;
             graph[new_index].f = graph[new_index].h + graph[new_index].g;
             graph[new_index].parent = explored_index;
+
+            if (graph[new_index].explored == true) {
+              graph[new_index].explored == false;
+              new_q[26*tid+i] = new_index;
+            }
+            
           }
         }
+
+        __syncthreads();
       }
 
     }

@@ -178,6 +178,11 @@ __global__ void explore(planner::BiNode* graph, T* q,  T* new_q, T* b_q, T* new_
             graph[new_index].g = graph[explored_index].g + cost;
             graph[new_index].f = graph[new_index].h + graph[new_index].g;
             graph[new_index].parent = explored_index;
+
+            // if (graph[new_index].explored == true) {
+            //   graph[new_index].explored == false;
+            //   new_q[26*tid+i] = new_index;
+            // }
           }
         }
       }
@@ -199,18 +204,18 @@ __global__ void explore(planner::BiNode* graph, T* q,  T* new_q, T* b_q, T* new_
     graph[explored_index].b_explored = true;
     graph[explored_index].b_frontier = false;
 
-    if (graph[explored_index].explored){
-    //   printf("FOUND");
-      // printf("Hello from thread %d, I am exploring %d\n", tid, explored_index);
-      // planner::Node* temp_node = graph[explored_index].parent;
-      // while (!temp_node->start){
+    // if (graph[explored_index].explored){
+    // //   printf("FOUND");
+    //   // printf("Hello from thread %d, I am exploring %d\n", tid, explored_index);
+    //   // planner::Node* temp_node = graph[explored_index].parent;
+    //   // while (!temp_node->start){
         
-      //     temp_node->path = true;
-      //     temp_node = temp_node->parent;
-      // }
-      meeting_nodes[tid] = explored_index;
-      path_found_gpu = true;
-    }
+    //   //     temp_node->path = true;
+    //   //     temp_node = temp_node->parent;
+    //   // }
+    //   meeting_nodes[tid] = explored_index;
+    //   path_found_gpu = true;
+    // }
 
     if (!path_found_gpu){
       for (int i=0; i<26; i++)
@@ -274,6 +279,11 @@ __global__ void explore(planner::BiNode* graph, T* q,  T* new_q, T* b_q, T* new_
             graph[new_index].b_g = graph[explored_index].b_g + cost;
             graph[new_index].b_f = graph[new_index].b_h + graph[new_index].b_g;
             graph[new_index].b_parent = explored_index;
+
+            // if (graph[new_index].explored == true) {
+            //   graph[new_index].explored == false;
+            //   new_b_q[26*tid+i] = new_index;
+            // }
           }
         }
       }
@@ -382,13 +392,15 @@ void parallel_bi_explore(planner::BiNode* graph, int n, int start, int goal, int
         // std::cout << "q thread is" << q_thread << std::endl;
         // std::cout << "b q thread is" << b_q_thread << std::endl;
 
+        // std::cout << block_size<< " " << thread_size << std::endl;
+
         thrust::device_vector<int> new_q_lists_gpu(q_thread*26);
         thrust::fill(new_q_lists_gpu.begin(), new_q_lists_gpu.end(), -1);
 
         thrust::device_vector<int> new_b_q_lists_gpu(b_q_thread*26);
         thrust::fill(new_b_q_lists_gpu.begin(), new_b_q_lists_gpu.end(), -1);
 
-        thrust::device_vector<int> meeting_nodes(q_thread + b_q_thread);
+        thrust::device_vector<int> meeting_nodes(q_thread);
         thrust::fill(meeting_nodes.begin(), meeting_nodes.end(), -1);
 
 
@@ -432,7 +444,18 @@ void parallel_bi_explore(planner::BiNode* graph, int n, int start, int goal, int
 
             // //sort the q_list based on the f value
             thrust::device_vector<float> f_value(q_lists_gpu.size());
-            get_f<<<1, q_lists_gpu.size()>>>(thrust::raw_pointer_cast(q_lists_gpu.data()),  map_gpu, thrust::raw_pointer_cast(f_value.data()), q_lists_gpu.size() );
+
+            int f_block_size, f_thread_size;
+            if (q_lists_gpu.size() <=1024){
+                f_block_size = 1;
+                f_thread_size = q_lists_gpu.size();
+              }
+            else{
+                f_block_size = (q_lists_gpu.size()/1024) + 1;
+                f_thread_size = 1024;
+              }
+
+            get_f<<<f_block_size, f_thread_size>>>(thrust::raw_pointer_cast(q_lists_gpu.data()),  map_gpu, thrust::raw_pointer_cast(f_value.data()), q_lists_gpu.size() );
             thrust::sort_by_key(f_value.begin(), f_value.end(), q_lists_gpu.begin() );
             // thrust::reverse(thrust::device, q_lists_gpu.begin(), q_lists_gpu.end());
             
@@ -453,7 +476,18 @@ void parallel_bi_explore(planner::BiNode* graph, int n, int start, int goal, int
 
             // //sort the q_list based on the f value
             thrust::device_vector<float> b_f_value(b_q_lists_gpu.size());
-            get_b_f<<<1, b_q_lists_gpu.size()>>>(thrust::raw_pointer_cast(b_q_lists_gpu.data()),  map_gpu, thrust::raw_pointer_cast(b_f_value.data()), b_q_lists_gpu.size() );
+            
+            int b_f_block_size, b_f_thread_size;
+            if (b_q_lists_gpu.size() <=1024){
+                b_f_block_size = 1;
+                b_f_thread_size = b_q_lists_gpu.size();
+              }
+            else{
+                b_f_block_size = (b_q_lists_gpu.size()/1024) + 1;
+                b_f_thread_size = 1024;
+              }
+
+            get_b_f<<<b_f_block_size, b_f_thread_size>>>(thrust::raw_pointer_cast(b_q_lists_gpu.data()),  map_gpu, thrust::raw_pointer_cast(b_f_value.data()), b_q_lists_gpu.size() );
             thrust::sort_by_key(b_f_value.begin(), b_f_value.end(), b_q_lists_gpu.begin() );
             // thrust::reverse(thrust::device, b_q_lists_gpu.begin(), b_q_lists_gpu.end());
             
@@ -484,9 +518,21 @@ void parallel_bi_explore(planner::BiNode* graph, int n, int start, int goal, int
             meeting_nodes.erase(thrust::unique(meeting_nodes.begin(), meeting_nodes.end()), meeting_nodes.end() );
 
             
-            // std::cout<< "Possible middle point number" << meeting_nodes.size() << std::endl;
+            std::cout<< "Possible middle point number" << meeting_nodes.size() << std::endl;
             
             thrust::device_vector<float> total_g_value(meeting_nodes.size());
+
+            // int g_block_size, g_thread_size;
+            // if (meeting_nodes.size() <=1024){
+            //     g_block_size = 1;
+            //     g_thread_size = meeting_nodes.size();
+            //   }
+            // else{
+            //     g_block_size = (meeting_nodes.size()/1024) + 1;
+            //     g_thread_size = 1024;
+            //   }
+
+
             get_total_g<<<1, meeting_nodes.size()>>>(thrust::raw_pointer_cast(meeting_nodes.data()),  map_gpu, thrust::raw_pointer_cast(total_g_value.data()), meeting_nodes.size() );
 
             auto it = std::min_element(std::begin(total_g_value), std::end(total_g_value));
@@ -524,7 +570,7 @@ void parallel_bi_explore(planner::BiNode* graph, int n, int start, int goal, int
         }    
     }
 
-    if (q_lists_gpu.size()==0 || b_q_lists_gpu.size()==0) std::cout<< "NO PATH IS FOUND" <<std::endl;        
+    // if (q_lists_gpu.size()==0 || b_q_lists_gpu.size()==0) std::cout<< "NO PATH IS FOUND" <<std::endl;        
     
 
 

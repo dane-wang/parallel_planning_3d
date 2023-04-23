@@ -99,6 +99,8 @@ namespace planner
 
     void clear_obstacle_block(planner::BiNode* graph, int n, int current, int goal,  std::vector<int>& obstacle);
 
+    std::vector<int> goal_generation( int start, int goal, int n);
+
 
 }
 
